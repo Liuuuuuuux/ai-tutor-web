@@ -1,0 +1,88 @@
+import { Tree, Tag, Spin, Empty, Button } from 'antd';
+import {
+  BookOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  PlayCircleOutlined,
+} from '@ant-design/icons';
+import type { TreeProps } from 'antd';
+import type { KnowledgePoint } from '@/types';
+
+interface KnowledgeTreeProps {
+  data: KnowledgePoint[];
+  loading?: boolean;
+  onSelect?: (point: KnowledgePoint) => void;
+  onDecompose?: (id: string) => void;
+}
+
+type StatusType = 'NOT_STARTED' | 'LEARNING' | 'MASTERED';
+
+const statusConfig: Record<StatusType, { color: string; text: string; icon: React.ReactNode }> = {
+  NOT_STARTED: { color: 'default', text: '未开始', icon: <ClockCircleOutlined /> },
+  LEARNING: { color: 'processing', text: '学习中', icon: <PlayCircleOutlined /> },
+  MASTERED: { color: 'success', text: '已掌握', icon: <CheckCircleOutlined /> },
+};
+
+export function KnowledgeTree({ data, loading, onSelect, onDecompose }: KnowledgeTreeProps) {
+  // 转换为 Ant Design Tree 数据格式
+  const convertToTreeData = (points: KnowledgePoint[]): TreeProps['treeData'] => {
+    return points.map((point) => ({
+      key: point.id,
+      title: (
+        <div className="flex items-center gap-2">
+          <span>{point.title}</span>
+          <Tag color={statusConfig[point.status as StatusType]?.color} className="ml-2">
+            {statusConfig[point.status as StatusType]?.icon}
+            <span className="ml-1">{statusConfig[point.status as StatusType]?.text}</span>
+          </Tag>
+          {point.masteryScore !== undefined && (
+            <span className="text-xs text-gray-500">{point.masteryScore}%</span>
+          )}
+        </div>
+      ),
+      icon: <BookOutlined />,
+      children: point.children ? convertToTreeData(point.children) : undefined,
+      data: point,
+    }));
+  };
+
+  const handleSelect: TreeProps['onSelect'] = (_selectedKeys, info) => {
+    if (onSelect && info.selectedNodes[0]) {
+      const node = info.selectedNodes[0] as { data?: KnowledgePoint };
+      if (node.data) {
+        onSelect(node.data);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return <Empty description="暂无知识点" className="py-10" />;
+  }
+
+  return (
+    <div>
+      <Tree
+        showIcon
+        defaultExpandAll
+        treeData={convertToTreeData(data)}
+        onSelect={handleSelect}
+        className="bg-gray-50 p-4 rounded-lg"
+      />
+      {onDecompose && (
+        <div className="mt-4">
+          <Button type="dashed" onClick={() => data[0] && onDecompose(data[0].id)}>
+            AI 拆解知识点
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

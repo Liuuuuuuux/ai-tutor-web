@@ -1,0 +1,1 @@
+export { KnowledgePointsPage } from './KnowledgePointsPage';
