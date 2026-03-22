@@ -1,9 +1,14 @@
 import request from './client';
 import type { LearningGoal, CreateLearningGoalRequest } from '@/types';
-import type { PageResponse, PageParams } from '@/types/api';
+import type { PageResponse } from '@/types/api';
 
 // 获取学习目标列表
-export function getLearningGoals(params?: PageParams): Promise<PageResponse<LearningGoal>> {
+export function getLearningGoals(params?: {
+  pageNum?: number;
+  pageSize?: number;
+  title?: string;
+  status?: number;
+}): Promise<PageResponse<LearningGoal>> {
   return request.get('/learning-goals', { params });
 }
 
@@ -28,9 +33,4 @@ export function updateLearningGoal(
 // 删除学习目标
 export function deleteLearningGoal(id: string): Promise<void> {
   return request.delete(`/learning-goals/${id}`);
-}
-
-// 更新学习进度
-export function updateLearningProgress(id: string, progress: number): Promise<LearningGoal> {
-  return request.patch(`/learning-goals/${id}/progress`, { progress });
 }

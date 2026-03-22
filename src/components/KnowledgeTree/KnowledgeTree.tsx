@@ -7,6 +7,7 @@ import {
 } from '@ant-design/icons';
 import type { TreeProps } from 'antd';
 import type { KnowledgePoint } from '@/types';
+import { KnowledgePointStatus } from '@/types';
 
 interface KnowledgeTreeProps {
   data: KnowledgePoint[];
@@ -15,12 +16,22 @@ interface KnowledgeTreeProps {
   onDecompose?: (id: string) => void;
 }
 
-type StatusType = 'NOT_STARTED' | 'LEARNING' | 'MASTERED';
-
-const statusConfig: Record<StatusType, { color: string; text: string; icon: React.ReactNode }> = {
-  NOT_STARTED: { color: 'default', text: '未开始', icon: <ClockCircleOutlined /> },
-  LEARNING: { color: 'processing', text: '学习中', icon: <PlayCircleOutlined /> },
-  MASTERED: { color: 'success', text: '已掌握', icon: <CheckCircleOutlined /> },
+const statusConfig: Record<number, { color: string; text: string; icon: React.ReactNode }> = {
+  [KnowledgePointStatus.NOT_STARTED]: {
+    color: 'default',
+    text: '未开始',
+    icon: <ClockCircleOutlined />,
+  },
+  [KnowledgePointStatus.LEARNING]: {
+    color: 'processing',
+    text: '学习中',
+    icon: <PlayCircleOutlined />,
+  },
+  [KnowledgePointStatus.MASTERED]: {
+    color: 'success',
+    text: '已掌握',
+    icon: <CheckCircleOutlined />,
+  },
 };
 
 export function KnowledgeTree({ data, loading, onSelect, onDecompose }: KnowledgeTreeProps) {
@@ -31,12 +42,12 @@ export function KnowledgeTree({ data, loading, onSelect, onDecompose }: Knowledg
       title: (
         <div className="flex items-center gap-2">
           <span>{point.title}</span>
-          <Tag color={statusConfig[point.status as StatusType]?.color} className="ml-2">
-            {statusConfig[point.status as StatusType]?.icon}
-            <span className="ml-1">{statusConfig[point.status as StatusType]?.text}</span>
+          <Tag color={statusConfig[point.status]?.color} className="ml-2">
+            {statusConfig[point.status]?.icon}
+            <span className="ml-1">{statusConfig[point.status]?.text}</span>
           </Tag>
-          {point.masteryScore !== undefined && (
-            <span className="text-xs text-gray-500">{point.masteryScore}%</span>
+          {point.masteryLevel !== undefined && point.masteryLevel > 0 && (
+            <span className="text-xs text-gray-500">{point.masteryLevel}%</span>
           )}
         </div>
       ),

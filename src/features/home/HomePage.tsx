@@ -10,11 +10,12 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useLearningGoals } from '@/hooks';
 import type { LearningGoal } from '@/types';
+import { LearningGoalStatus } from '@/types';
 
-const statusConfig = {
-  ACTIVE: { color: '#1890ff', text: '进行中' },
-  COMPLETED: { color: '#52c41a', text: '已完成' },
-  PAUSED: { color: '#faad14', text: '已暂停' },
+const statusConfig: Record<number, { color: string; text: string }> = {
+  [LearningGoalStatus.ACTIVE]: { color: '#1890ff', text: '进行中' },
+  [LearningGoalStatus.COMPLETED]: { color: '#52c41a', text: '已完成' },
+  [LearningGoalStatus.PAUSED]: { color: '#faad14', text: '已暂停' },
 };
 
 export function HomePage() {
@@ -24,8 +25,8 @@ export function HomePage() {
   const goals = data?.records || [];
 
   // 统计数据
-  const activeCount = goals.filter((g) => g.status === 'ACTIVE').length;
-  const completedCount = goals.filter((g) => g.status === 'COMPLETED').length;
+  const activeCount = goals.filter((g) => g.status === LearningGoalStatus.ACTIVE).length;
+  const completedCount = goals.filter((g) => g.status === LearningGoalStatus.COMPLETED).length;
   const totalCount = goals.length;
   const avgProgress =
     totalCount > 0

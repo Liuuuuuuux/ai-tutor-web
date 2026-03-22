@@ -10,6 +10,7 @@ import { LearningGoalsPage, LearningGoalDetailPage } from '@/features/learning-g
 import { KnowledgePointsPage } from '@/features/knowledge-points';
 import { LearningSessionPage } from '@/features/learning-session';
 import { MaterialsPage } from '@/features/materials';
+import { LearningStatsPage } from '@/features/learning-stats';
 import { ExamPage } from '@/features/exam';
 
 // 创建 Query Client
@@ -69,7 +70,7 @@ function App() {
             <Route
               element={
                 <PrivateRoute>
-                  <MainLayout children={null} />
+                  <MainLayout />
                 </PrivateRoute>
               }
             >
@@ -79,6 +80,7 @@ function App() {
               <Route path="/knowledge-points/:goalId" element={<KnowledgePointsPage />} />
               <Route path="/learning-session/:goalId/:pointId" element={<LearningSessionPage />} />
               <Route path="/materials" element={<MaterialsPage />} />
+              <Route path="/learning-stats" element={<LearningStatsPage />} />
               <Route path="/exam" element={<ExamPage />} />
             </Route>
 

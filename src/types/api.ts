@@ -5,7 +5,7 @@ export interface ApiResponse<T = unknown> {
   message: string;
 }
 
-// 分页响应
+// 分页响应（MyBatis-Plus 格式）
 export interface PageResponse<T> {
   records: T[];
   total: number;
@@ -16,6 +16,6 @@ export interface PageResponse<T> {
 
 // 分页请求参数
 export interface PageParams {
-  current?: number;
-  size?: number;
+  pageNum?: number;
+  pageSize?: number;
 }

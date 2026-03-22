@@ -11,10 +11,10 @@ import {
 import type { LearningGoal } from '@/types';
 import type { ColumnsType } from 'antd/es/table';
 
-const statusConfig = {
-  ACTIVE: { color: 'processing', text: '进行中' },
-  COMPLETED: { color: 'success', text: '已完成' },
-  PAUSED: { color: 'warning', text: '已暂停' },
+const statusConfig: Record<number, { color: string; text: string }> = {
+  0: { color: 'processing', text: '进行中' },
+  1: { color: 'success', text: '已完成' },
+  2: { color: 'warning', text: '已暂停' },
 };
 
 export function LearningGoalsPage() {
@@ -85,7 +85,7 @@ export function LearningGoalsPage() {
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (status: keyof typeof statusConfig) => (
+      render: (status: number) => (
         <Tag color={statusConfig[status]?.color}>{statusConfig[status]?.text}</Tag>
       ),
     },

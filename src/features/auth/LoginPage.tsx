@@ -3,22 +3,32 @@ import { Card, Form, Input, Button, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/stores';
+import { login } from '@/api';
 
 export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { setUserId } = useUserStore();
+  const { setUser } = useUserStore();
 
-  const onFinish = async (values: { userId: string }) => {
+  const onFinish = async (values: { username: string }) => {
     setLoading(true);
     try {
-      // 简化登录：直接使用 userId
-      // 实际项目中应该调用后端 API 验证
-      setUserId(values.userId);
-      message.success('登录成功');
+      // 调用后端登录 API
+      const response = await login({ username: values.username });
+
+      // 设置用户信息到全局状态
+      setUser(response.user);
+
+      if (response.isNewUser) {
+        message.success('欢迎新用户！已为您自动创建账号');
+      } else {
+        message.success('登录成功');
+      }
+
       navigate('/');
-    } catch {
+    } catch (error) {
       message.error('登录失败，请重试');
+      console.error('登录错误:', error);
     } finally {
       setLoading(false);
     }
@@ -33,8 +43,15 @@ export function LoginPage() {
         </div>
 
         <Form name="login" onFinish={onFinish} autoComplete="off" size="large">
-          <Form.Item name="userId" rules={[{ required: true, message: '请输入用户 ID' }]}>
-            <Input prefix={<UserOutlined />} placeholder="请输入用户 ID" />
+          <Form.Item
+            name="username"
+            rules={[
+              { required: true, message: '请输入用户名' },
+              { min: 2, message: '用户名至少 2 个字符' },
+              { max: 32, message: '用户名最多 32 个字符' },
+            ]}
+          >
+            <Input prefix={<UserOutlined />} placeholder="请输入用户名" />
           </Form.Item>
 
           <Form.Item>
@@ -45,8 +62,8 @@ export function LoginPage() {
         </Form>
 
         <div className="text-center text-gray-400 text-sm">
-          <p>提示：输入任意用户 ID 即可登录</p>
-          <p>系统会自动创建新用户</p>
+          <p>提示：输入用户名即可登录</p>
+          <p>新用户会自动创建账号</p>
         </div>
       </Card>
     </div>

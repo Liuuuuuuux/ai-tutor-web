@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Input, Button, Spin, Empty, Avatar, Card } from 'antd';
 import { SendOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
 import { useSSE } from '@/hooks';
-import { useLearningStore } from '@/stores';
 import type { ChatMessage } from '@/types';
 
 const { TextArea } = Input;
@@ -10,47 +9,48 @@ const { TextArea } = Input;
 interface ChatBoxProps {
   sessionId: string;
   initialMessages?: ChatMessage[];
+  onMessageSent?: () => void;
 }
 
-export function ChatBox({ sessionId, initialMessages = [] }: ChatBoxProps) {
+export function ChatBox({ sessionId, initialMessages = [], onMessageSent }: ChatBoxProps) {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const { messages, isStreaming, streamingContent, connect, clearMessages } = useSSE({
+  const {
+    messages: newMessages,
+    isStreaming,
+    streamingContent,
+    connect,
+  } = useSSE({
     onComplete: () => {
-      // 流式完成后的回调
+      // 流式完成后，通知父组件重新获取消息
+      onMessageSent?.();
     },
     onError: (error) => {
       console.error('SSE Error:', error);
     },
   });
 
-  const { addMessage, setMessages } = useLearningStore();
-
-  // 初始化消息
-  useEffect(() => {
-    if (initialMessages.length > 0) {
-      setMessages(initialMessages);
-      clearMessages();
-      initialMessages.forEach((msg) => addMessage(msg));
-    }
-  }, [initialMessages, setMessages, clearMessages, addMessage]);
+  // 合并历史消息和新消息
+  const displayMessages = useMemo(() => {
+    // 过滤掉已经在 initialMessages 中的新消息（通过 id 去重）
+    const existingIds = new Set(initialMessages.map((m) => m.id));
+    const uniqueNewMessages = newMessages.filter((m) => !existingIds.has(m.id));
+    return [...initialMessages, ...uniqueNewMessages];
+  }, [initialMessages, newMessages]);
 
   // 自动滚动到底部
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingContent]);
+  }, [displayMessages, streamingContent]);
 
   // 发送消息
   const handleSend = () => {
     const content = inputValue.trim();
     if (!content || isStreaming) return;
 
-    // 更新本地消息列表
-    clearMessages();
-
-    // 连接 SSE
+    // 连接 SSE，发送消息
     connect(sessionId, content);
 
     setInputValue('');
@@ -113,11 +113,11 @@ export function ChatBox({ sessionId, initialMessages = [] }: ChatBoxProps) {
     <Card className="h-full flex flex-col">
       {/* 消息列表 */}
       <div className="flex-1 overflow-y-auto mb-4" style={{ maxHeight: 'calc(100vh - 300px)' }}>
-        {messages.length === 0 && !isStreaming ? (
+        {displayMessages.length === 0 && !isStreaming ? (
           <Empty description="开始对话吧" className="mt-20" />
         ) : (
           <>
-            {messages.map((msg, index) => renderMessage(msg, index))}
+            {displayMessages.map((msg, index) => renderMessage(msg, index))}
             {renderStreamingContent()}
           </>
         )}

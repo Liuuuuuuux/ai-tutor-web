@@ -3,17 +3,18 @@ import { Card, Descriptions, Progress, Button, Space, Tag, Spin, Empty, List } f
 import { ArrowLeftOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { useLearningGoal, useKnowledgeTree } from '@/hooks';
 import type { KnowledgePoint } from '@/types';
+import { LearningGoalStatus, KnowledgePointStatus } from '@/types';
 
-const statusConfig = {
-  ACTIVE: { color: 'processing', text: '进行中' },
-  COMPLETED: { color: 'success', text: '已完成' },
-  PAUSED: { color: 'warning', text: '已暂停' },
+const statusConfig: Record<number, { color: string; text: string }> = {
+  [LearningGoalStatus.ACTIVE]: { color: 'processing', text: '进行中' },
+  [LearningGoalStatus.COMPLETED]: { color: 'success', text: '已完成' },
+  [LearningGoalStatus.PAUSED]: { color: 'warning', text: '已暂停' },
 };
 
-const pointStatusConfig = {
-  NOT_STARTED: { color: 'default', text: '未开始' },
-  LEARNING: { color: 'processing', text: '学习中' },
-  MASTERED: { color: 'success', text: '已掌握' },
+const pointStatusConfig: Record<number, { color: string; text: string }> = {
+  [KnowledgePointStatus.NOT_STARTED]: { color: 'default', text: '未开始' },
+  [KnowledgePointStatus.LEARNING]: { color: 'processing', text: '学习中' },
+  [KnowledgePointStatus.MASTERED]: { color: 'success', text: '已掌握' },
 };
 
 export function LearningGoalDetailPage() {
@@ -24,6 +25,13 @@ export function LearningGoalDetailPage() {
   const { data: knowledgeTree, isLoading: treeLoading } = useKnowledgeTree(id || '');
 
   const isLoading = goalLoading || treeLoading;
+
+  // 导航到知识点页面
+  const goToKnowledgePoints = () => {
+    if (id) {
+      navigate(`/knowledge-points/${id}`);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -53,9 +61,11 @@ export function LearningGoalDetailPage() {
   };
 
   const allPoints = knowledgeTree ? flattenPoints(knowledgeTree) : [];
-  const masteredCount = allPoints.filter((p) => p.status === 'MASTERED').length;
-  const learningCount = allPoints.filter((p) => p.status === 'LEARNING').length;
-  const notStartedCount = allPoints.filter((p) => p.status === 'NOT_STARTED').length;
+  const masteredCount = allPoints.filter((p) => p.status === KnowledgePointStatus.MASTERED).length;
+  const learningCount = allPoints.filter((p) => p.status === KnowledgePointStatus.LEARNING).length;
+  const notStartedCount = allPoints.filter(
+    (p) => p.status === KnowledgePointStatus.NOT_STARTED
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -78,10 +88,10 @@ export function LearningGoalDetailPage() {
             {goal.description || '暂无描述'}
           </Descriptions.Item>
           <Descriptions.Item label="创建时间">
-            {new Date(goal.createdAt).toLocaleString()}
+            {goal.createTime ? new Date(goal.createTime).toLocaleString() : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="更新时间">
-            {new Date(goal.updatedAt).toLocaleString()}
+            {goal.updateTime ? new Date(goal.updateTime).toLocaleString() : '-'}
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -117,11 +127,7 @@ export function LearningGoalDetailPage() {
       <Card
         title="知识点列表"
         extra={
-          <Button
-            type="primary"
-            icon={<PlayCircleOutlined />}
-            onClick={() => navigate(`/knowledge-points/${id}`)}
-          >
+          <Button type="primary" icon={<PlayCircleOutlined />} onClick={goToKnowledgePoints}>
             开始学习
           </Button>
         }
@@ -138,34 +144,60 @@ export function LearningGoalDetailPage() {
                   <Button
                     key="learn"
                     type="link"
-                    onClick={() => navigate(`/learning-session/${id}/${point.id}`)}
+                    onClick={() => {
+                      if (id && point.id) {
+                        navigate(`/learning-session/${id}/${point.id}`);
+                      }
+                    }}
                   >
                     学习
                   </Button>,
                 ]}
               >
                 <List.Item.Meta
-                  title={<span style={{ paddingLeft: (point.level - 1) * 20 }}>{point.title}</span>}
+                  title={
+                    <span style={{ paddingLeft: ((point.level || 1) - 1) * 20 }}>
+                      {point.title}
+                    </span>
+                  }
                   description={point.description || '暂无描述'}
                 />
               </List.Item>
             )}
           />
         ) : (
-          <Empty description="暂无知识点">
-            <Button type="primary" onClick={() => navigate(`/knowledge-points/${id}`)}>
-              开始拆解知识点
-            </Button>
-          </Empty>
+          <div className="text-center py-10">
+            <Empty description="暂无知识点">
+              <Button type="primary" onClick={goToKnowledgePoints}>
+                开始拆解知识点
+              </Button>
+            </Empty>
+          </div>
         )}
       </Card>
 
       {/* 快捷操作 */}
       <Card title="快捷操作">
         <Space>
-          <Button onClick={() => navigate(`/knowledge-points/${id}`)}>管理知识点</Button>
-          <Button onClick={() => navigate(`/exam?goalId=${id}`)}>生成试卷</Button>
-          <Button onClick={() => navigate(`/materials?goalId=${id}`)}>管理资料</Button>
+          <Button onClick={goToKnowledgePoints}>管理知识点</Button>
+          <Button
+            onClick={() => {
+              if (id) {
+                navigate(`/exam?goalId=${id}`);
+              }
+            }}
+          >
+            生成试卷
+          </Button>
+          <Button
+            onClick={() => {
+              if (id) {
+                navigate(`/materials?goalId=${id}`);
+              }
+            }}
+          >
+            管理资料
+          </Button>
         </Space>
       </Card>
     </div>

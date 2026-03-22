@@ -1,6 +1,16 @@
 {
   "permissions": {
-    "allow": ["Skill(update-config)"],
-    "defaultMode": "bypassPermissions"
-  }
+    "allow": [
+      "Skill(update-config)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "mcp__playwright__*",
+      "mcp__github__*",
+      "mcp__postgres__*",
+      "mcp__chrome-devtools__*"
+    ],
+    "defaultMode": "bypassPermissions",
+    "skipDangerousModePermissionPrompt": true
+  },
+  "enableAllProjectMcpServers": true
 }

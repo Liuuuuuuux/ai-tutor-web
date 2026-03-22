@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import type { ChatMessage, SSEMessage } from '@/types';
+import type { ChatMessage } from '@/types';
 
 interface UseSSEOptions {
   onMessage?: (message: ChatMessage) => void;
@@ -11,7 +11,7 @@ interface UseSSEReturn {
   messages: ChatMessage[];
   isStreaming: boolean;
   streamingContent: string;
-  connect: (sessionId: string, content: string) => void;
+  connect: (sessionId: string, content: string) => Promise<void>;
   disconnect: () => void;
   clearMessages: () => void;
 }
@@ -23,76 +23,118 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
 
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const accumulatedContentRef = useRef('');
 
   const connect = useCallback(
-    (sessionId: string, content: string) => {
-      // 关闭之前的连接
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
+    async (sessionId: string, content: string) => {
+      // 取消之前的请求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
 
+      abortControllerRef.current = new AbortController();
       setIsStreaming(true);
       setStreamingContent('');
       accumulatedContentRef.current = '';
 
-      // 构建带参数的 URL（使用 POST 方式需要用 fetch，这里用 GET + query params）
+      // 先添加用户消息
+      const userMessage: ChatMessage = {
+        id: `msg-user-${Date.now()}`,
+        sessionId,
+        role: 'USER',
+        content,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+
       const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-      const userId = localStorage.getItem('userId') || '';
-      const url = `${baseUrl}/learning-sessions/${sessionId}/chat/stream?userId=${encodeURIComponent(userId)}&content=${encodeURIComponent(content)}`;
+      const url = `${baseUrl}/learning-sessions/${sessionId}/chat`;
 
-      const eventSource = new EventSource(url);
-      eventSourceRef.current = eventSource;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Id': localStorage.getItem('userId') || '',
+          },
+          body: JSON.stringify({ content }),
+          signal: abortControllerRef.current.signal,
+        });
 
-      eventSource.onmessage = (event) => {
-        try {
-          const data: SSEMessage = JSON.parse(event.data);
-
-          if (data.type === 'content' && data.content) {
-            accumulatedContentRef.current += data.content;
-            setStreamingContent(accumulatedContentRef.current);
-          } else if (data.type === 'done') {
-            // 流式完成，创建完整消息
-            const assistantMessage: ChatMessage = {
-              id: `msg-${Date.now()}`,
-              sessionId,
-              role: 'ASSISTANT',
-              content: accumulatedContentRef.current,
-              createdAt: new Date().toISOString(),
-            };
-
-            setMessages((prev) => [...prev, assistantMessage]);
-            onMessage?.(assistantMessage);
-            onComplete?.();
-
-            setIsStreaming(false);
-            eventSource.close();
-          } else if (data.type === 'error') {
-            onError?.(new Error(data.message || '未知错误'));
-            setIsStreaming(false);
-            eventSource.close();
-          }
-        } catch {
-          // 如果不是 JSON，可能是纯文本
-          accumulatedContentRef.current += event.data;
-          setStreamingContent(accumulatedContentRef.current);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      };
 
-      eventSource.onerror = () => {
-        onError?.(new Error('SSE 连接错误'));
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('No response body');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done) {
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // 处理 SSE 格式的数据
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // 保留最后一个不完整的行
+
+          for (const line of lines) {
+            if (line.startsWith('data:')) {
+              const data = line.slice(5).trim();
+              if (data) {
+                accumulatedContentRef.current += data;
+                setStreamingContent(accumulatedContentRef.current);
+              }
+            } else if (line.trim() && !line.startsWith(':')) {
+              // 如果不是 SSE 格式，直接作为内容
+              accumulatedContentRef.current += line;
+              setStreamingContent(accumulatedContentRef.current);
+            }
+          }
+        }
+
+        // 流式完成，创建 AI 消息
+        if (accumulatedContentRef.current) {
+          const assistantMessage: ChatMessage = {
+            id: `msg-assistant-${Date.now()}`,
+            sessionId,
+            role: 'ASSISTANT',
+            content: accumulatedContentRef.current,
+            createdAt: new Date().toISOString(),
+          };
+
+          setMessages((prev) => [...prev, assistantMessage]);
+          onMessage?.(assistantMessage);
+        }
+
+        onComplete?.();
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // 用户主动取消，不做处理
+          return;
+        }
+        console.error('SSE Error:', error);
+        onError?.(error instanceof Error ? error : new Error('SSE 连接错误'));
+      } finally {
         setIsStreaming(false);
-        eventSource.close();
-      };
+      }
     },
     [onMessage, onError, onComplete]
   );
 
   const disconnect = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
     setIsStreaming(false);
   }, []);

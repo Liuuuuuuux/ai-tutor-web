@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from '@/api';
 
-// 学习目标相关 Hooks
+// ==================== 学习目标相关 Hooks ====================
+
 export function useLearningGoals(page = 1, size = 10) {
   return useQuery({
     queryKey: ['learning-goals', page, size],
-    queryFn: () => api.getLearningGoals({ current: page, size }),
+    queryFn: () => api.getLearningGoals({ pageNum: page, pageSize: size }),
   });
 }
 
@@ -53,26 +54,118 @@ export function useDeleteLearningGoal() {
   });
 }
 
-// 知识点相关 Hooks
-export function useKnowledgeTree(goalId: string) {
+// ==================== 知识点相关 Hooks ====================
+
+export function useKnowledgePoints(goalId: string) {
   return useQuery({
-    queryKey: ['knowledge-tree', goalId],
-    queryFn: () => api.getKnowledgeTree(goalId),
+    queryKey: ['knowledge-points', goalId],
+    queryFn: () => api.getKnowledgePoints(goalId),
     enabled: !!goalId,
   });
 }
 
-export function useDecomposeKnowledgePoint() {
+// 兼容旧的命名
+export const useKnowledgeTree = useKnowledgePoints;
+
+export function useKnowledgePoint(id: string) {
+  return useQuery({
+    queryKey: ['knowledge-point', id],
+    queryFn: () => api.getKnowledgePoint(id),
+    enabled: !!id,
+  });
+}
+
+export function useCreateKnowledgePoint() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: api.decomposeKnowledgePoint,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['knowledge-tree'] });
+    mutationFn: api.createKnowledgePoint,
+    onSuccess: (_, data) => {
+      queryClient.invalidateQueries({ queryKey: ['knowledge-points', data.goalId] });
     },
   });
 }
 
-// 学习会话相关 Hooks
+export function useUpdateKnowledgePoint() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Parameters<typeof api.updateKnowledgePoint>[1];
+    }) => api.updateKnowledgePoint(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['knowledge-points'] });
+    },
+  });
+}
+
+export function useDeleteKnowledgePoint() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.deleteKnowledgePoint,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['knowledge-points'] });
+    },
+  });
+}
+
+export function useUpdateSortOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ goalId, pointIds }: { goalId: string; pointIds: string[] }) =>
+      api.updateSortOrder(goalId, pointIds),
+    onSuccess: (_, { goalId }) => {
+      queryClient.invalidateQueries({ queryKey: ['knowledge-points', goalId] });
+    },
+  });
+}
+
+export function useUpdateMasteryLevel() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, masteryLevel }: { id: string; masteryLevel: number }) =>
+      api.updateMasteryLevel(id, masteryLevel),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['knowledge-points'] });
+    },
+  });
+}
+
+// AI 知识点生成
+export function useGenerateKnowledgePoints() {
+  return useMutation({
+    mutationFn: api.generateKnowledgePoints,
+  });
+}
+
+export function useConfirmKnowledgePoints() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ goalId, points }: { goalId: string; points: api.GeneratedKnowledgePoint[] }) =>
+      api.confirmKnowledgePoints(goalId, points),
+    onSuccess: (_, { goalId }) => {
+      queryClient.invalidateQueries({ queryKey: ['knowledge-points', goalId] });
+    },
+  });
+}
+
+export function useRegenerateKnowledgePoints() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.regenerateKnowledgePoints,
+    onSuccess: (_, data) => {
+      queryClient.invalidateQueries({ queryKey: ['knowledge-points', data.goalId] });
+    },
+  });
+}
+
+// 兼容旧的命名（已废弃）
+export const useDecomposeKnowledgePoint = useRegenerateKnowledgePoints;
+
+// ==================== 学习会话相关 Hooks ====================
+
 export function useLearningSession(id: string) {
   return useQuery({
     queryKey: ['learning-session', id],
@@ -81,12 +174,22 @@ export function useLearningSession(id: string) {
   });
 }
 
-export function useSessionMessages(sessionId: string) {
+export function useCurrentSession(pointId: string) {
   return useQuery({
-    queryKey: ['session-messages', sessionId],
-    queryFn: () => api.getSessionMessages(sessionId),
-    enabled: !!sessionId,
+    queryKey: ['current-session', pointId],
+    queryFn: () => api.getCurrentSession(pointId),
+    enabled: !!pointId,
   });
+}
+
+// 获取会话消息（从会话详情中获取）
+export function useSessionMessages(sessionId: string) {
+  const { data: session } = useLearningSession(sessionId);
+  return {
+    data: session?.messages,
+    isLoading: !session,
+    error: null,
+  };
 }
 
 export function useCreateLearningSession() {
@@ -95,28 +198,59 @@ export function useCreateLearningSession() {
   });
 }
 
-export function useSendMessage() {
-  return useMutation({
-    mutationFn: ({ sessionId, content }: { sessionId: string; content: string }) =>
-      api.sendMessage(sessionId, content),
-  });
-}
-
-// 学习资料相关 Hooks
-export function useMaterials(goalId: string, page = 1, size = 10) {
-  return useQuery({
-    queryKey: ['materials', goalId, page, size],
-    queryFn: () => api.getMaterials(goalId, { current: page, size }),
-    enabled: !!goalId,
-  });
-}
-
-export function useCreateMaterial() {
+export function useCompleteSession() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: api.createMaterial,
+    mutationFn: api.completeSession,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['learning-session'] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-points'] });
+    },
+  });
+}
+
+export function useSetSearchScope() {
+  return useMutation({
+    mutationFn: ({ sessionId, scope }: { sessionId: string; scope: 'POINT' | 'GOAL' | 'ALL' }) =>
+      api.setSearchScope(sessionId, scope),
+  });
+}
+
+// ==================== 学习资料相关 Hooks ====================
+
+export function useMaterials(params: {
+  goalId: string;
+  pointId?: string;
+  pageNum?: number;
+  pageSize?: number;
+}) {
+  return useQuery({
+    queryKey: ['materials', params],
+    queryFn: () => api.getMaterials(params),
+    enabled: !!params.goalId,
+  });
+}
+
+export function useMaterialDetail(id: string) {
+  return useQuery({
+    queryKey: ['material', id],
+    queryFn: () => api.getMaterialDetail(id),
+    enabled: !!id,
+  });
+}
+
+export function useUploadMaterial() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.uploadMaterial,
     onSuccess: (_, data) => {
-      queryClient.invalidateQueries({ queryKey: ['materials', data.goalId] });
+      queryClient.invalidateQueries({
+        queryKey: ['materials'],
+        predicate: (query) => {
+          const params = query.queryKey[1] as { goalId?: string };
+          return params?.goalId === data.goalId;
+        },
+      });
     },
   });
 }
@@ -131,11 +265,79 @@ export function useDeleteMaterial() {
   });
 }
 
-// 试卷相关 Hooks
-export function useExams(goalId?: string) {
+export function useBatchDeleteMaterials() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.batchDeleteMaterials,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
+    },
+  });
+}
+
+export function useUpdateMaterialPoints() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, pointIds }: { id: string; pointIds: string[] }) =>
+      api.updateMaterialPoints(id, pointIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
+    },
+  });
+}
+
+export function useMaterialStats(goalId: string) {
   return useQuery({
-    queryKey: ['exams', goalId],
-    queryFn: () => api.getExams(goalId),
+    queryKey: ['material-stats', goalId],
+    queryFn: () => api.getMaterialStats(goalId),
+    enabled: !!goalId,
+  });
+}
+
+// AI 搜索
+export function useSearchMaterials() {
+  return useMutation({
+    mutationFn: api.searchMaterials,
+  });
+}
+
+export function useSaveSearchResult() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.saveSearchResult,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
+    },
+  });
+}
+
+// 兼容旧的 createMaterial（已废弃，使用 uploadMaterial 或 saveSearchResult）
+export function useCreateMaterial() {
+  return useUploadMaterial();
+}
+
+// ==================== 学习统计相关 Hooks ====================
+
+export function useLearningStatsOverview() {
+  return useQuery({
+    queryKey: ['learning-stats-overview'],
+    queryFn: api.getLearningStatsOverview,
+  });
+}
+
+export function useProgressCurve(params?: { goalId?: string; days?: number }) {
+  return useQuery({
+    queryKey: ['progress-curve', params],
+    queryFn: () => api.getProgressCurve(params),
+  });
+}
+
+// ==================== 试卷相关 Hooks ====================
+
+export function useExams(params?: { examTitle?: string; status?: number; createUserId?: string }) {
+  return useQuery({
+    queryKey: ['exams', params],
+    queryFn: () => api.getExams(params),
   });
 }
 
@@ -157,12 +359,13 @@ export function useGenerateExam() {
   });
 }
 
-export function useDeleteExam() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: api.deleteExam,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['exams'] });
-    },
-  });
-}
+// 删除试卷功能暂未实现
+// export function useDeleteExam() {
+//   const queryClient = useQueryClient();
+//   return useMutation({
+//     mutationFn: api.deleteExam,
+//     onSuccess: () => {
+//       queryClient.invalidateQueries({ queryKey: ['exams'] });
+//     },
+//   });
+// }

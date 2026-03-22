@@ -1,38 +1,30 @@
 import request from './client';
-import type { LearningSession, ChatMessage } from '@/types';
+import type { LearningSession, SessionCompleteResult } from '@/types';
 
-// 获取学习会话详情
+// 获取学习会话详情（包含消息列表）
 export function getLearningSession(id: string): Promise<LearningSession> {
   return request.get(`/learning-sessions/${id}`);
 }
 
+// 获取当前进行中的会话（用于恢复）
+export function getCurrentSession(pointId: string): Promise<LearningSession | null> {
+  return request.get('/learning-sessions/current', { params: { pointId } });
+}
+
 // 创建学习会话
 export function createLearningSession(data: {
-  goalId: string;
-  knowledgePointId: string;
-  mode: 'TEACHING' | 'COACH';
+  pointId: string;
+  mode: string;
 }): Promise<LearningSession> {
   return request.post('/learning-sessions', data);
 }
 
-// 结束学习会话
-export function endLearningSession(id: string): Promise<LearningSession> {
-  return request.post(`/learning-sessions/${id}/end`);
+// 结束学习会话（AI 总结评估）
+export function completeSession(id: string): Promise<SessionCompleteResult> {
+  return request.post(`/learning-sessions/${id}/complete`);
 }
 
-// 获取会话历史消息
-export function getSessionMessages(sessionId: string): Promise<ChatMessage[]> {
-  return request.get(`/learning-sessions/${sessionId}/messages`);
-}
-
-// 发送消息（非流式）
-export function sendMessage(sessionId: string, content: string): Promise<ChatMessage> {
-  return request.post(`/learning-sessions/${sessionId}/chat`, { content });
-}
-
-// 获取 SSE 流式聊天 URL
-export function getSSEChatUrl(sessionId: string): string {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-  const userId = localStorage.getItem('userId') || '';
-  return `${baseUrl}/learning-sessions/${sessionId}/chat/stream?userId=${userId}`;
+// 设置资料检索范围
+export function setSearchScope(sessionId: string, scope: string): Promise<boolean> {
+  return request.post(`/learning-sessions/${sessionId}/search-config`, { searchScope: scope });
 }

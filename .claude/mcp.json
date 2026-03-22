@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@executeautomation/playwright-mcp-server"],
+      "env": {
+        "PLAYWRIGHT_SCREENSHOT_DIR": "${workspaceFolder}/.playwright-screenshots"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "DATABASE_URL": "postgresql://postgres:123456@localhost:5432/ai_tutor"
+      }
+    },
+    "chrome-devtools": {
+      "command": "G:/Program Files/nodejs/node.exe",
+      "args": [
+        "G:/Program Files/nodejs/node_global/node_modules/@mcp-b/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js"
+      ]
+    }
+  }
+}

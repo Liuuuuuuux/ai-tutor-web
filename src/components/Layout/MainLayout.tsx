@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { Outlet } from 'react-router-dom';
 import { Layout, Menu, Dropdown, Avatar, Button } from 'antd';
 import {
   HomeOutlined,
@@ -7,17 +7,14 @@ import {
   FileDoneOutlined,
   UserOutlined,
   LogoutOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '@/stores';
 
 const { Header, Sider, Content } = Layout;
 
-interface MainLayoutProps {
-  children: ReactNode;
-}
-
-export function MainLayout({ children }: MainLayoutProps) {
+export function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { userId, logout } = useUserStore();
@@ -37,6 +34,11 @@ export function MainLayout({ children }: MainLayoutProps) {
       key: '/materials',
       icon: <FileTextOutlined />,
       label: '学习资料',
+    },
+    {
+      key: '/learning-stats',
+      icon: <BarChartOutlined />,
+      label: '学习统计',
     },
     {
       key: '/exam',
@@ -83,6 +85,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     if (path.startsWith('/knowledge-points')) return '/learning-goals';
     if (path.startsWith('/learning-session')) return '/learning-goals';
     if (path.startsWith('/materials')) return '/materials';
+    if (path.startsWith('/learning-stats')) return '/learning-stats';
     if (path.startsWith('/exam')) return '/exam';
     return '/';
   };
@@ -120,7 +123,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </Header>
         <Content className="m-4 md:m-6 p-4 md:p-6 bg-white rounded-lg shadow-sm overflow-auto">
-          {children}
+          <Outlet />
         </Content>
       </Layout>
     </Layout>
