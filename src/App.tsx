@@ -50,8 +50,17 @@ function App() {
           locale={zhCN}
           theme={{
             token: {
-              colorPrimary: '#1890ff',
-              borderRadius: 6,
+              colorPrimary: '#0f766e',
+              borderRadius: 16,
+              fontFamily: '"Aptos", "PingFang SC", "Microsoft YaHei UI", sans-serif',
+            },
+            components: {
+              Card: {
+                borderRadiusLG: 24,
+              },
+              Button: {
+                borderRadius: 999,
+              },
             },
           }}
         >

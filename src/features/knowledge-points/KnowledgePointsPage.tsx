@@ -1,40 +1,39 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Card,
-  Spin,
-  Empty,
+  ArrowLeftOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  RobotOutlined,
+} from '@ant-design/icons';
+import {
   Button,
-  Modal,
+  Card,
+  Empty,
   Form,
   Input,
   InputNumber,
-  Select,
   List,
-  Space,
-  Tag,
   message,
+  Modal,
   Popconfirm,
+  Select,
+  Space,
+  Spin,
+  Tag,
 } from 'antd';
 import {
-  EditOutlined,
-  ArrowLeftOutlined,
-  RobotOutlined,
-  PlusOutlined,
-  DeleteOutlined,
-} from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import {
-  useKnowledgePoints,
-  useGenerateKnowledgePoints,
   useConfirmKnowledgePoints,
-  useRegenerateKnowledgePoints,
-  useDeleteKnowledgePoint,
-  useUpdateMasteryLevel,
   useCreateKnowledgePoint,
+  useDeleteKnowledgePoint,
+  useGenerateKnowledgePoints,
+  useKnowledgePoints,
+  useRegenerateKnowledgePoints,
   useUpdateKnowledgePoint,
+  useUpdateMasteryLevel,
 } from '@/hooks';
-import type { KnowledgePoint, GeneratedKnowledgePoint } from '@/types';
+import type { GeneratedKnowledgePoint, KnowledgePoint } from '@/types';
 import { KnowledgePointStatus } from '@/types';
 
 const statusConfig: Record<number, { color: string; text: string }> = {
@@ -43,10 +42,8 @@ const statusConfig: Record<number, { color: string; text: string }> = {
   [KnowledgePointStatus.MASTERED]: { color: 'success', text: '已掌握' },
 };
 
-// 获取状态配置，提供默认值
-const getStatusConfig = (status: number) => {
-  return statusConfig[status] ?? { color: 'default', text: '未知' };
-};
+const getStatusConfig = (status: number) =>
+  statusConfig[status] ?? { color: 'default', text: '未知' };
 
 export function KnowledgePointsPage() {
   const { goalId } = useParams<{ goalId: string }>();
@@ -56,17 +53,14 @@ export function KnowledgePointsPage() {
   const [generatedPoints, setGeneratedPoints] = useState<GeneratedKnowledgePoint[]>([]);
   const [generateForm] = Form.useForm();
 
-  // 手动添加知识点
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addForm] = Form.useForm();
 
-  // 编辑知识点
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingPoint, setEditingPoint] = useState<KnowledgePoint | null>(null);
   const [editForm] = Form.useForm();
 
   const { data: knowledgePoints, isLoading } = useKnowledgePoints(goalId || '');
-  // 确保 knowledgePoints 始终是数组
   const safeKnowledgePoints = Array.isArray(knowledgePoints) ? knowledgePoints : [];
   const generateMutation = useGenerateKnowledgePoints();
   const confirmMutation = useConfirmKnowledgePoints();
@@ -77,10 +71,7 @@ export function KnowledgePointsPage() {
   const updateMutation = useUpdateKnowledgePoint();
 
   const handleSelect = (point: KnowledgePoint) => {
-    if (!goalId || !point.id) {
-      console.error('Missing goalId or pointId');
-      return;
-    }
+    if (!goalId || !point.id) return;
     navigate(`/learning-session/${goalId}/${point.id}`);
   };
 
@@ -92,7 +83,6 @@ export function KnowledgePointsPage() {
     updateMasteryMutation.mutate({ id, masteryLevel: 100 });
   };
 
-  // 编辑知识点
   const handleOpenEdit = (point: KnowledgePoint) => {
     setEditingPoint(point);
     editForm.setFieldsValue({
@@ -115,7 +105,7 @@ export function KnowledgePointsPage() {
       },
       {
         onSuccess: () => {
-          message.success('知识点更新成功');
+          message.success('知识点已更新');
           setEditModalOpen(false);
           setEditingPoint(null);
         },
@@ -153,6 +143,7 @@ export function KnowledgePointsPage() {
       message.warning('没有可保存的知识点');
       return;
     }
+
     confirmMutation.mutate(
       { goalId: goalId!, points: generatedPoints },
       {
@@ -185,11 +176,6 @@ export function KnowledgePointsPage() {
     );
   };
 
-  const handleBack = () => {
-    navigate('/learning-goals');
-  };
-
-  // 手动添加知识点
   const handleOpenAdd = () => {
     addForm.resetFields();
     setAddModalOpen(true);
@@ -213,30 +199,45 @@ export function KnowledgePointsPage() {
   };
 
   if (!goalId) {
-    return <Empty description="请先选择学习目标" className="py-20" />;
+    return <Empty description="请先选择一个学习空间" className="py-20" />;
   }
 
   return (
-    <div>
-      <Button type="text" icon={<ArrowLeftOutlined />} onClick={handleBack} className="mb-4">
-        返回
+    <div className="space-y-6">
+      <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/learning-goals')}>
+        返回学习空间
       </Button>
 
-      <Card
-        title="知识点列表"
-        extra={
-          <Space>
-            <Button type="primary" icon={<RobotOutlined />} onClick={handleOpenGenerate}>
+      <Card className="overflow-hidden border-0 bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_100%)] text-white shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/60">
+              Knowledge Map
+            </div>
+            <h1 className="mt-2 text-3xl font-semibold">知识点树</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-white/75">
+              先拆出知识点，再选择某个点进入聊天学习。你也可以让 AI 自动帮你生成一版知识点结构。
+            </p>
+          </div>
+          <Space wrap>
+            <Button
+              size="large"
+              type="primary"
+              icon={<RobotOutlined />}
+              onClick={handleOpenGenerate}
+            >
               AI 拆解知识点
             </Button>
-            <Button icon={<PlusOutlined />} onClick={handleOpenAdd}>
+            <Button size="large" ghost icon={<PlusOutlined />} onClick={handleOpenAdd}>
               手动添加
             </Button>
           </Space>
-        }
-      >
+        </div>
+      </Card>
+
+      <Card title="知识点列表">
         {isLoading ? (
-          <div className="flex justify-center items-center h-64">
+          <div className="flex h-64 items-center justify-center">
             <Spin size="large" />
           </div>
         ) : safeKnowledgePoints.length > 0 ? (
@@ -244,6 +245,7 @@ export function KnowledgePointsPage() {
             dataSource={safeKnowledgePoints}
             renderItem={(point: KnowledgePoint) => (
               <List.Item
+                className="rounded-[20px] border border-slate-100 px-4 py-4 transition hover:border-teal-200 hover:bg-teal-50/40"
                 actions={[
                   <Tag key="status" color={getStatusConfig(point.status).color}>
                     {getStatusConfig(point.status).text}
@@ -266,7 +268,7 @@ export function KnowledgePointsPage() {
                   ),
                   <Popconfirm
                     key="delete"
-                    title="确定删除此知识点吗？"
+                    title="确定删除这个知识点吗？"
                     onConfirm={() => handleDelete(point.id)}
                   >
                     <Button type="link" danger icon={<DeleteOutlined />}>
@@ -277,11 +279,9 @@ export function KnowledgePointsPage() {
               >
                 <List.Item.Meta
                   title={
-                    <Space>
-                      {point.title}
-                      {point.masteryLevel !== undefined && (
-                        <Tag color="blue">{point.masteryLevel}%</Tag>
-                      )}
+                    <Space wrap>
+                      <span className="text-base font-medium text-slate-900">{point.title}</span>
+                      <Tag color="blue">{point.masteryLevel ?? 0}%</Tag>
                     </Space>
                   }
                   description={point.description || '暂无描述'}
@@ -290,7 +290,7 @@ export function KnowledgePointsPage() {
             )}
           />
         ) : (
-          <Empty description="暂无知识点，点击上方按钮让 AI 帮你拆解">
+          <Empty description="还没有知识点，先让 AI 帮你拆解一版">
             <Button type="primary" icon={<RobotOutlined />} onClick={handleOpenGenerate}>
               AI 拆解知识点
             </Button>
@@ -298,7 +298,6 @@ export function KnowledgePointsPage() {
         )}
       </Card>
 
-      {/* AI 拆解知识点弹窗 */}
       <Modal
         title="AI 拆解知识点"
         open={generateModalOpen}
@@ -339,7 +338,7 @@ export function KnowledgePointsPage() {
                 </Button>,
               ]
         }
-        width={700}
+        width={760}
       >
         <Form form={generateForm} layout="vertical">
           <Form.Item
@@ -347,7 +346,7 @@ export function KnowledgePointsPage() {
             label="学习主题"
             rules={[{ required: true, message: '请输入学习主题' }]}
           >
-            <Input placeholder="例如：Redis、Spring Boot、微服务架构" />
+            <Input placeholder="例如：Redis、Spring Boot、英语语法、计算机网络" />
           </Form.Item>
           <Form.Item name="userBackground" label="学习背景（可选）">
             <Input.TextArea rows={2} placeholder="例如：有 Java 基础，了解数据库基本概念" />
@@ -356,43 +355,43 @@ export function KnowledgePointsPage() {
             <InputNumber min={3} max={15} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="difficultyLevel" label="难度级别" initialValue="MEDIUM">
-            <Select>
-              <Select.Option value="EASY">入门级</Select.Option>
-              <Select.Option value="MEDIUM">中级</Select.Option>
-              <Select.Option value="HARD">高级</Select.Option>
-            </Select>
+            <Select
+              options={[
+                { label: '入门', value: 'EASY' },
+                { label: '中级', value: 'MEDIUM' },
+                { label: '高级', value: 'HARD' },
+              ]}
+            />
           </Form.Item>
         </Form>
 
         {generatedPoints.length > 0 && (
           <div className="mt-4">
-            <h4 className="mb-2">拆解结果（可编辑标题和描述）</h4>
+            <h4 className="mb-3">拆解结果</h4>
             <List
               dataSource={generatedPoints}
               renderItem={(point, index) => (
                 <List.Item>
-                  <div className="w-full">
-                    <Space className="w-full" direction="vertical" style={{ width: '100%' }}>
-                      <Input
-                        value={point.title}
-                        onChange={(e) => {
-                          const newPoints = [...generatedPoints];
-                          newPoints[index] = { ...newPoints[index], title: e.target.value };
-                          setGeneratedPoints(newPoints);
-                        }}
-                        placeholder="知识点标题"
-                      />
-                      <Input.TextArea
-                        value={point.description}
-                        onChange={(e) => {
-                          const newPoints = [...generatedPoints];
-                          newPoints[index] = { ...newPoints[index], description: e.target.value };
-                          setGeneratedPoints(newPoints);
-                        }}
-                        rows={2}
-                        placeholder="知识点描述"
-                      />
-                    </Space>
+                  <div className="w-full space-y-3">
+                    <Input
+                      value={point.title}
+                      onChange={(e) => {
+                        const next = [...generatedPoints];
+                        next[index] = { ...next[index], title: e.target.value };
+                        setGeneratedPoints(next);
+                      }}
+                      placeholder="知识点标题"
+                    />
+                    <Input.TextArea
+                      value={point.description}
+                      onChange={(e) => {
+                        const next = [...generatedPoints];
+                        next[index] = { ...next[index], description: e.target.value };
+                        setGeneratedPoints(next);
+                      }}
+                      rows={2}
+                      placeholder="知识点描述"
+                    />
                   </div>
                 </List.Item>
               )}
@@ -401,7 +400,6 @@ export function KnowledgePointsPage() {
         )}
       </Modal>
 
-      {/* 手动添加知识点弹窗 */}
       <Modal
         title="手动添加知识点"
         open={addModalOpen}
@@ -424,12 +422,11 @@ export function KnowledgePointsPage() {
             <Input placeholder="例如：Spring IoC 容器" />
           </Form.Item>
           <Form.Item name="description" label="知识点描述">
-            <Input.TextArea rows={3} placeholder="描述该知识点的主要内容" />
+            <Input.TextArea rows={3} placeholder="描述一下这个知识点的核心内容" />
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* 编辑知识点弹窗 */}
       <Modal
         title="编辑知识点"
         open={editModalOpen}
@@ -461,7 +458,7 @@ export function KnowledgePointsPage() {
             <Input placeholder="例如：Spring IoC 容器" />
           </Form.Item>
           <Form.Item name="description" label="知识点描述">
-            <Input.TextArea rows={3} placeholder="描述该知识点的主要内容" />
+            <Input.TextArea rows={3} placeholder="描述一下这个知识点的核心内容" />
           </Form.Item>
         </Form>
       </Modal>
