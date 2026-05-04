@@ -1,0 +1,57 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - heading "AI Tutor" [level=1] [ref=e7]
+      - menu [ref=e8]:
+        - menuitem "home 首页" [ref=e9] [cursor=pointer]:
+          - img "home" [ref=e10]:
+            - img [ref=e11]
+          - generic [ref=e13]: 首页
+        - menuitem "book 学习目标" [ref=e14] [cursor=pointer]:
+          - img "book" [ref=e15]:
+            - img [ref=e16]
+          - generic [ref=e18]: 学习目标
+        - menuitem "file-text 学习资料" [ref=e19] [cursor=pointer]:
+          - img "file-text" [ref=e20]:
+            - img [ref=e21]
+          - generic [ref=e23]: 学习资料
+        - menuitem "bar-chart 学习统计" [ref=e24] [cursor=pointer]:
+          - img "bar-chart" [ref=e25]:
+            - img [ref=e26]
+          - generic [ref=e28]: 学习统计
+        - menuitem "file-done 试卷生成" [ref=e29] [cursor=pointer]:
+          - img "file-done" [ref=e30]:
+            - img [ref=e31]
+          - generic [ref=e33]: 试卷生成
+  - generic [ref=e34]:
+    - banner [ref=e35]:
+      - generic [ref=e36]: 费曼学习法智能平台
+      - generic [ref=e38] [cursor=pointer]:
+        - img "user" [ref=e40]:
+          - img [ref=e41]
+        - generic [ref=e43]: test-user-123
+    - main [ref=e44]:
+      - generic [ref=e705]:
+        - button "arrow-left 返回" [ref=e706] [cursor=pointer]:
+          - img "arrow-left" [ref=e708]:
+            - img [ref=e709]
+          - generic [ref=e711]: 返回
+        - generic [ref=e712]:
+          - generic [ref=e714]:
+            - generic [ref=e715]: 知识点列表
+            - generic [ref=e717]:
+              - button "robot AI 拆解知识点" [ref=e719] [cursor=pointer]:
+                - img "robot" [ref=e721]:
+                  - img [ref=e722]
+                - generic [ref=e724]: AI 拆解知识点
+              - button "plus 手动添加" [ref=e726] [cursor=pointer]:
+                - img "plus" [ref=e728]:
+                  - img [ref=e729]
+                - generic [ref=e732]: 手动添加
+          - generic [ref=e734]:
+            - img "No data" [ref=e736]
+            - generic [ref=e748]: 暂无知识点，点击上方按钮让 AI 帮你拆解
+            - button "robot AI 拆解知识点" [ref=e750] [cursor=pointer]:
+              - img "robot" [ref=e752]:
+                - img [ref=e753]
+              - generic [ref=e755]: AI 拆解知识点

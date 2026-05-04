@@ -1,0 +1,53 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - heading "AI Tutor" [level=1] [ref=e7]
+    - paragraph [ref=e8]: MVP auth
+  - generic [ref=e9]:
+    - tablist [ref=e10]:
+      - generic [ref=e12]:
+        - tab "Login" [ref=e14] [cursor=pointer]
+        - tab "Register" [selected] [ref=e16] [cursor=pointer]
+    - generic:
+      - generic:
+        - tabpanel "Register"
+  - generic [ref=e17]:
+    - generic [ref=e57]:
+      - generic "Username" [ref=e59]: "* Username"
+      - generic [ref=e63]:
+        - img "user" [ref=e65]:
+          - img [ref=e66]
+        - textbox "* Username" [ref=e68]:
+          - /placeholder: Username
+          - text: newuser
+    - generic [ref=e70]:
+      - generic "Nickname" [ref=e72]: "* Nickname"
+      - generic [ref=e76]:
+        - img "idcard" [ref=e78]:
+          - img [ref=e79]
+        - textbox "* Nickname" [ref=e81]:
+          - /placeholder: Nickname
+          - text: New User
+    - generic [ref=e83]:
+      - generic "Password" [ref=e85]: "* Password"
+      - generic [ref=e89]:
+        - img "lock" [ref=e91]:
+          - img [ref=e92]
+        - textbox "* Password" [ref=e94]:
+          - /placeholder: Password
+          - text: "1234"
+        - img "eye-invisible" [ref=e96] [cursor=pointer]:
+          - img [ref=e97]
+    - generic [ref=e101]:
+      - generic "Confirm Password" [ref=e103]: "* Confirm Password"
+      - generic [ref=e104]:
+        - generic [ref=e107]:
+          - img "lock" [ref=e109]:
+            - img [ref=e110]
+          - textbox "* Confirm Password" [ref=e112]:
+            - /placeholder: Confirm Password
+            - text: "12345"
+          - img "eye-invisible" [ref=e114] [cursor=pointer]:
+            - img [ref=e115]
+        - generic [ref=e121]: Passwords do not match
+    - button "Register" [active] [ref=e118] [cursor=pointer]:
+      - generic [ref=e55]: Register

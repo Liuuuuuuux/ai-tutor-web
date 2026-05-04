@@ -1,0 +1,86 @@
+- generic [ref=e122]:
+  - complementary [ref=e123]:
+    - generic [ref=e124]:
+      - heading "AI Tutor" [level=1] [ref=e126]
+      - menu [ref=e127]:
+        - menuitem "home Home" [ref=e128] [cursor=pointer]:
+          - img "home" [ref=e129]:
+            - img [ref=e130]
+          - generic [ref=e132]: Home
+        - menuitem "book Goals" [ref=e133] [cursor=pointer]:
+          - img "book" [ref=e134]:
+            - img [ref=e135]
+          - generic [ref=e137]: Goals
+        - menuitem "file-text Materials" [ref=e138] [cursor=pointer]:
+          - img "file-text" [ref=e139]:
+            - img [ref=e140]
+          - generic [ref=e142]: Materials
+        - menuitem "bar-chart Stats" [ref=e143] [cursor=pointer]:
+          - img "bar-chart" [ref=e144]:
+            - img [ref=e145]
+          - generic [ref=e147]: Stats
+        - menuitem "file-done Exam" [ref=e148] [cursor=pointer]:
+          - img "file-done" [ref=e149]:
+            - img [ref=e150]
+          - generic [ref=e152]: Exam
+  - generic [ref=e153]:
+    - banner [ref=e154]:
+      - generic [ref=e155]: AI Tutor Platform
+      - generic [ref=e157] [cursor=pointer]:
+        - img "user" [ref=e159]:
+          - img [ref=e160]
+        - generic [ref=e162]: New User
+    - main [ref=e163]:
+      - generic [ref=e164]:
+        - generic [ref=e167]:
+          - heading "欢迎来到 AI Tutor" [level=2] [ref=e168]
+          - paragraph [ref=e169]: 使用费曼学习法，让 AI 成为你最好的学习伙伴
+        - generic [ref=e170]:
+          - generic [ref=e174]:
+            - generic [ref=e175]: 学习目标总数
+            - generic [ref=e176]:
+              - img "book" [ref=e178]:
+                - img [ref=e179]
+              - generic [ref=e181]: "0"
+          - generic [ref=e185]:
+            - generic [ref=e186]: 进行中
+            - generic [ref=e187]:
+              - img "play-circle" [ref=e189]:
+                - img [ref=e190]
+              - generic [ref=e193]: "0"
+          - generic [ref=e197]:
+            - generic [ref=e198]: 已完成
+            - generic [ref=e199]:
+              - img "check-circle" [ref=e201]:
+                - img [ref=e202]
+              - generic [ref=e205]: "0"
+          - generic [ref=e209]:
+            - generic [ref=e210]: 平均进度
+            - generic [ref=e211]:
+              - img "clock-circle" [ref=e213]:
+                - img [ref=e214]
+              - generic [ref=e217]: "0"
+              - generic [ref=e218]: "%"
+        - generic [ref=e219]:
+          - generic [ref=e222]: 快速入口
+          - generic [ref=e224]:
+            - button "plus 创建学习目标" [ref=e226] [cursor=pointer]:
+              - img "plus" [ref=e228]:
+                - img [ref=e229]
+              - generic [ref=e232]: 创建学习目标
+            - button "book 查看全部目标" [ref=e234] [cursor=pointer]:
+              - img "book" [ref=e236]:
+                - img [ref=e237]
+              - generic [ref=e239]: 查看全部目标
+        - generic [ref=e240]:
+          - generic [ref=e242]:
+            - generic [ref=e243]: 最近学习目标
+            - button "查看全部 arrow-right" [ref=e245] [cursor=pointer]:
+              - generic [ref=e246]: 查看全部
+              - img "arrow-right" [ref=e247]:
+                - img [ref=e248]
+          - generic [ref=e251]:
+            - img "No data" [ref=e253]
+            - generic [ref=e259]: 暂无学习目标
+            - button "创建第一个学习目标" [ref=e261] [cursor=pointer]:
+              - generic [ref=e262]: 创建第一个学习目标

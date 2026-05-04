@@ -1,24 +1,44 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Radio, Button, Spin, Empty, Descriptions, Modal, Result, List, Tag } from 'antd';
+import {
+  Card,
+  Radio,
+  Button,
+  Spin,
+  Empty,
+  Descriptions,
+  Modal,
+  Result,
+  List,
+  Tag,
+  Avatar,
+  Space,
+} from 'antd';
 import {
   ArrowLeftOutlined,
   BookOutlined,
   BulbOutlined,
   CheckCircleOutlined,
+  HistoryOutlined,
+  RobotOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
-import { ChatBox } from '@/components';
+import { ChatBox, MarkdownRenderer } from '@/components';
 import {
   useLearningSession,
   useCreateLearningSession,
   useCompleteSession,
   useCurrentSession,
   useKnowledgePoint,
+  useHistorySessions,
 } from '@/hooks';
 import { useLearningStore } from '@/stores';
 import { useQueryClient } from '@tanstack/react-query';
-import type { SessionCompleteResult, ChatMessage, SessionMessage } from '@/types';
+import type { SessionCompleteResult, ChatMessage, SessionMessage, LearningSession } from '@/types';
 import { KnowledgePointStatus, LearningSessionStatus } from '@/types';
+
+const isLearningMode = (value: string): value is 'TEACHING' | 'COACH' =>
+  value === 'TEACHING' || value === 'COACH';
 
 export function LearningSessionPage() {
   const { goalId, pointId } = useParams<{ goalId: string; pointId: string }>();
@@ -28,19 +48,30 @@ export function LearningSessionPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [completeResult, setCompleteResult] = useState<SessionCompleteResult | null>(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [viewingSession, setViewingSession] = useState<LearningSession | null>(null);
 
   // 使用 ref 追踪是否已初始化，避免触发重新渲染
   const hasInitialized = useRef(false);
+  // 标记用户是否主动切换模式（切换后需要跳过恢复旧会话）
+  const isModeSwitching = useRef(false);
 
   const { mode, setMode, setCurrentSession, setCurrentKnowledgePoint } = useLearningStore();
   const createSessionMutation = useCreateLearningSession();
   const completeSessionMutation = useCompleteSession();
 
   // 获取知识点详情
-  const { data: knowledgePoint } = useKnowledgePoint(pointId || '');
+  const { data: knowledgePoint, isLoading: isKnowledgePointLoading } = useKnowledgePoint(
+    pointId || ''
+  );
 
   // 检查是否有进行中的会话
-  const { data: currentSession } = useCurrentSession(pointId || '');
+  const { data: currentSession, isLoading: isCurrentSessionLoading } = useCurrentSession(
+    pointId || ''
+  );
+
+  // 获取历史会话列表
+  const { data: historySessions } = useHistorySessions(pointId || '');
 
   // 获取会话详情
   const { data: session } = useLearningSession(sessionId || '');
@@ -50,7 +81,7 @@ export function LearningSessionPage() {
   const sessionMessages = session?.messages;
   const currentSessionId = sessionId || '';
   const messages: ChatMessage[] = useMemo(() => {
-    if (!sessionMessages) return [];
+    if (!sessionMessages || !Array.isArray(sessionMessages)) return [];
     return sessionMessages.map((msg: SessionMessage, index: number) => ({
       id: `${currentSessionId}-${index}`,
       sessionId: currentSessionId,
@@ -65,12 +96,34 @@ export function LearningSessionPage() {
     // 只在组件挂载时执行一次
     if (hasInitialized.current) return;
     if (!pointId) return;
+    // 等待当前会话查询完成后再决定是否创建新会话
+    if (isCurrentSessionLoading) return;
+
+    // 如果用户主动切换模式，跳过恢复旧会话，直接创建新会话
+    if (isModeSwitching.current) {
+      isModeSwitching.current = false;
+      hasInitialized.current = true;
+      createSessionMutation.mutate(
+        { pointId, mode },
+        {
+          onSuccess: (newSession) => {
+            setSessionId(newSession.id);
+            setCurrentSession(newSession);
+          },
+        }
+      );
+      return;
+    }
 
     if (currentSession) {
       // 有进行中的会话，恢复它
       hasInitialized.current = true;
       setSessionId(currentSession.id);
       setCurrentSession(currentSession);
+      // 同步会话模式到 store
+      if (isLearningMode(currentSession.mode)) {
+        setMode(currentSession.mode);
+      }
     } else if (!createSessionMutation.isPending) {
       // 没有进行中的会话，创建新的
       hasInitialized.current = true;
@@ -85,7 +138,7 @@ export function LearningSessionPage() {
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pointId, currentSession]);
+  }, [pointId, currentSession, isCurrentSessionLoading, mode]);
 
   // 更新知识点信息
   useEffect(() => {
@@ -98,14 +151,36 @@ export function LearningSessionPage() {
     navigate(`/knowledge-points/${goalId}`);
   };
 
+  const handleViewHistory = (session: LearningSession) => {
+    setViewingSession(session);
+    setShowHistoryModal(true);
+  };
+
+  const formatTime = (time: string | undefined) => {
+    if (!time) return '';
+    const date = new Date(time);
+    return date.toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   const handleModeChange = (newMode: 'TEACHING' | 'COACH') => {
+    if (newMode === mode) return;
     // 切换模式需要确认
     Modal.confirm({
       title: '切换学习模式',
       content: '切换模式将开始新的学习会话，当前会话将被保留。确定要切换吗？',
       onOk: () => {
+        // 标记用户主动切换模式，跳过恢复旧会话
+        isModeSwitching.current = true;
+
+        // 更新模式并重置状态
         setMode(newMode);
         setSessionId(null);
+        setCurrentSession(null);
         hasInitialized.current = false;
       },
     });
@@ -135,10 +210,19 @@ export function LearningSessionPage() {
     }
   };
 
-  if (createSessionMutation.isPending) {
+  if (isKnowledgePointLoading || isCurrentSessionLoading || createSessionMutation.isPending) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Spin size="large" tip="正在创建学习会话..." />
+        <Spin
+          size="large"
+          tip={
+            isKnowledgePointLoading
+              ? '正在加载知识点...'
+              : isCurrentSessionLoading
+                ? '正在检查会话状态...'
+                : '正在创建学习会话...'
+          }
+        />
       </div>
     );
   }
@@ -228,6 +312,59 @@ export function LearningSessionPage() {
               </Descriptions>
             </Card>
           )}
+
+          {/* 历史记录 */}
+          {historySessions && historySessions.length > 0 && (
+            <Card
+              title={
+                <span>
+                  <HistoryOutlined className="mr-1" />
+                  历史记录
+                </span>
+              }
+              className="mt-4"
+            >
+              <List
+                size="small"
+                dataSource={historySessions}
+                renderItem={(session: LearningSession) => (
+                  <List.Item
+                    actions={[
+                      <Button
+                        key="view"
+                        type="link"
+                        size="small"
+                        onClick={() => handleViewHistory(session)}
+                      >
+                        查看
+                      </Button>,
+                    ]}
+                  >
+                    <List.Item.Meta
+                      title={
+                        <Space size={4}>
+                          <Tag color={session.mode === 'TEACHING' ? 'blue' : 'green'}>
+                            {session.mode === 'TEACHING' ? '教学' : '引导'}
+                          </Tag>
+                          <Tag color={session.status === 0 ? 'processing' : 'success'}>
+                            {session.status === 0 ? '进行中' : '已完成'}
+                          </Tag>
+                        </Space>
+                      }
+                      description={
+                        <div className="text-xs">
+                          {session.masteryScore !== null && session.masteryScore !== undefined && (
+                            <div>掌握程度：{session.masteryScore}%</div>
+                          )}
+                          <div>{formatTime(session.createTime)}</div>
+                        </div>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            </Card>
+          )}
         </div>
 
         {/* 右侧聊天区域 */}
@@ -303,6 +440,89 @@ export function LearningSessionPage() {
                 />
               </Card>
             )}
+          </div>
+        )}
+      </Modal>
+
+      {/* 历史对话查看 Modal */}
+      <Modal
+        title="历史学习记录"
+        open={showHistoryModal}
+        onCancel={() => {
+          setShowHistoryModal(false);
+          setViewingSession(null);
+        }}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setShowHistoryModal(false);
+              setViewingSession(null);
+            }}
+          >
+            关闭
+          </Button>,
+        ]}
+        width={700}
+      >
+        {viewingSession && (
+          <div>
+            <Descriptions column={2} size="small" className="mb-4">
+              <Descriptions.Item label="学习模式">
+                <Tag color={viewingSession.mode === 'TEACHING' ? 'blue' : 'green'}>
+                  {viewingSession.mode === 'TEACHING' ? '教学模式' : '引导模式'}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="掌握程度">
+                {viewingSession.masteryScore !== null && viewingSession.masteryScore !== undefined
+                  ? `${viewingSession.masteryScore}%`
+                  : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="状态">
+                <Tag color={viewingSession.status === 0 ? 'processing' : 'success'}>
+                  {viewingSession.status === 0 ? '进行中' : '已完成'}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="创建时间">
+                {formatTime(viewingSession.createTime)}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {/* 对话内容 */}
+            <div
+              style={{ maxHeight: '400px', overflowY: 'auto' }}
+              className="border rounded-lg p-4"
+            >
+              {viewingSession.messages && viewingSession.messages.length > 0 ? (
+                viewingSession.messages.map((msg, index) => {
+                  const isUser = msg.role === 'USER' || msg.role?.toUpperCase() === 'USER';
+                  return (
+                    <div
+                      key={index}
+                      className={`flex gap-3 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}
+                    >
+                      <Avatar
+                        icon={isUser ? <UserOutlined /> : <RobotOutlined />}
+                        style={{ backgroundColor: isUser ? '#1890ff' : '#52c41a' }}
+                      />
+                      <div
+                        className={`max-w-[70%] px-4 py-2 rounded-lg ${
+                          isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {isUser ? (
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                        ) : (
+                          <MarkdownRenderer content={msg.content} />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <Empty description="暂无对话记录" />
+              )}
+            </div>
           </div>
         )}
       </Modal>

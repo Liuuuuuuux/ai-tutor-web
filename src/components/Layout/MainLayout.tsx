@@ -1,15 +1,14 @@
-import { Outlet } from 'react-router-dom';
-import { Layout, Menu, Dropdown, Avatar, Button } from 'antd';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Avatar, Button, Dropdown, Layout, Menu } from 'antd';
 import {
-  HomeOutlined,
-  BookOutlined,
-  FileTextOutlined,
-  FileDoneOutlined,
-  UserOutlined,
-  LogoutOutlined,
   BarChartOutlined,
+  BookOutlined,
+  FileDoneOutlined,
+  FileTextOutlined,
+  HomeOutlined,
+  LogoutOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '@/stores';
 
 const { Header, Sider, Content } = Layout;
@@ -17,67 +16,34 @@ const { Header, Sider, Content } = Layout;
 export function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userId, logout } = useUserStore();
+  const { userId, user, logout } = useUserStore();
 
   const menuItems = [
-    {
-      key: '/',
-      icon: <HomeOutlined />,
-      label: '首页',
-    },
-    {
-      key: '/learning-goals',
-      icon: <BookOutlined />,
-      label: '学习目标',
-    },
-    {
-      key: '/materials',
-      icon: <FileTextOutlined />,
-      label: '学习资料',
-    },
-    {
-      key: '/learning-stats',
-      icon: <BarChartOutlined />,
-      label: '学习统计',
-    },
-    {
-      key: '/exam',
-      icon: <FileDoneOutlined />,
-      label: '试卷生成',
-    },
+    { key: '/', icon: <HomeOutlined />, label: 'Home' },
+    { key: '/learning-goals', icon: <BookOutlined />, label: 'Goals' },
+    { key: '/materials', icon: <FileTextOutlined />, label: 'Materials' },
+    { key: '/learning-stats', icon: <BarChartOutlined />, label: 'Stats' },
+    { key: '/exam', icon: <FileDoneOutlined />, label: 'Exam' },
   ];
 
-  // 处理菜单点击
   const handleMenuClick = (key: string) => {
     navigate(key);
   };
 
-  // 处理退出登录
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  // 用户下拉菜单
   const userMenuItems = [
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: '个人中心',
-      onClick: () => navigate('/profile'),
-    },
-    {
-      type: 'divider' as const,
-    },
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: '退出登录',
+      label: 'Logout',
       onClick: handleLogout,
     },
   ];
 
-  // 获取当前选中的菜单项
   const getSelectedKey = () => {
     const path = location.pathname;
     if (path === '/') return '/';
@@ -106,18 +72,20 @@ export function MainLayout() {
       </Sider>
       <Layout>
         <Header className="bg-white shadow-sm px-6 flex items-center justify-between">
-          <span className="text-lg font-medium">费曼学习法智能平台</span>
+          <span className="text-lg font-medium">AI Tutor Platform</span>
           <div className="flex items-center gap-4">
             {userId ? (
               <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
                 <div className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-3 py-2 rounded-lg">
                   <Avatar size="small" icon={<UserOutlined />} className="bg-blue-500" />
-                  <span className="text-gray-600">{userId}</span>
+                  <span className="text-gray-600">
+                    {user?.nickname || user?.username || userId}
+                  </span>
                 </div>
               </Dropdown>
             ) : (
               <Button type="primary" onClick={() => navigate('/login')}>
-                登录
+                Login
               </Button>
             )}
           </div>

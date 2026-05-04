@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { Input, Button, Spin, Empty, Avatar, Card } from 'antd';
 import { SendOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
 import { useSSE } from '@/hooks';
+import { MarkdownRenderer } from '@/components';
 import type { ChatMessage } from '@/types';
 
 const { TextArea } = Input;
@@ -22,9 +23,11 @@ export function ChatBox({ sessionId, initialMessages = [], onMessageSent }: Chat
     isStreaming,
     streamingContent,
     connect,
+    clearMessages,
   } = useSSE({
     onComplete: () => {
-      // 流式完成后，通知父组件重新获取消息
+      // 流式完成后，清空本地消息（因为后端已保存），然后通知父组件重新获取
+      clearMessages();
       onMessageSent?.();
     },
     onError: (error) => {
@@ -34,10 +37,27 @@ export function ChatBox({ sessionId, initialMessages = [], onMessageSent }: Chat
 
   // 合并历史消息和新消息
   const displayMessages = useMemo(() => {
-    // 过滤掉已经在 initialMessages 中的新消息（通过 id 去重）
-    const existingIds = new Set(initialMessages.map((m) => m.id));
-    const uniqueNewMessages = newMessages.filter((m) => !existingIds.has(m.id));
-    return [...initialMessages, ...uniqueNewMessages];
+    // 确保 initialMessages 是数组
+    const safeInitialMessages = Array.isArray(initialMessages) ? initialMessages : [];
+
+    // 使用统一的角色（大写）+ content 作为去重键
+    const messageMap = new Map<string, ChatMessage>();
+
+    // 先添加 initialMessages（来自后端的消息，优先保留）
+    for (const msg of safeInitialMessages) {
+      const key = `${msg.role?.toUpperCase()}:${msg.content}`;
+      messageMap.set(key, msg);
+    }
+
+    // 再添加 newMessages 中的新消息（如果内容相同则跳过）
+    for (const msg of newMessages) {
+      const key = `${msg.role?.toUpperCase()}:${msg.content}`;
+      if (!messageMap.has(key)) {
+        messageMap.set(key, msg);
+      }
+    }
+
+    return Array.from(messageMap.values());
   }, [initialMessages, newMessages]);
 
   // 自动滚动到底部
@@ -67,7 +87,8 @@ export function ChatBox({ sessionId, initialMessages = [], onMessageSent }: Chat
 
   // 渲染消息
   const renderMessage = (message: ChatMessage, index: number) => {
-    const isUser = message.role === 'USER';
+    // 兼容后端返回的小写 role (user/assistant)
+    const isUser = message.role === 'USER' || message.role?.toUpperCase() === 'USER';
 
     return (
       <div
@@ -84,7 +105,11 @@ export function ChatBox({ sessionId, initialMessages = [], onMessageSent }: Chat
             isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'
           }`}
         >
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          {isUser ? (
+            <p className="whitespace-pre-wrap">{message.content}</p>
+          ) : (
+            <MarkdownRenderer content={message.content} />
+          )}
         </div>
       </div>
     );
@@ -102,7 +127,7 @@ export function ChatBox({ sessionId, initialMessages = [], onMessageSent }: Chat
           style={{ backgroundColor: '#52c41a' }}
         />
         <div className="max-w-[70%] px-4 py-2 rounded-lg bg-gray-100 text-gray-800">
-          <p className="whitespace-pre-wrap">{streamingContent}</p>
+          <MarkdownRenderer content={streamingContent} />
           <span className="inline-block w-2 h-4 bg-green-500 animate-pulse ml-1" />
         </div>
       </div>

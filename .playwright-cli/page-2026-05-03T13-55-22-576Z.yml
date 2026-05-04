@@ -1,0 +1,61 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - heading "AI Tutor" [level=1] [ref=e7]
+        - menu [ref=e8]:
+          - menuitem "home 首页" [ref=e9] [cursor=pointer]:
+            - img "home" [ref=e10]:
+              - img [ref=e11]
+            - generic [ref=e13]: 首页
+          - menuitem "book 学习目标" [ref=e14] [cursor=pointer]:
+            - img "book" [ref=e15]:
+              - img [ref=e16]
+            - generic [ref=e18]: 学习目标
+          - menuitem "file-text 学习资料" [ref=e19] [cursor=pointer]:
+            - img "file-text" [ref=e20]:
+              - img [ref=e21]
+            - generic [ref=e23]: 学习资料
+          - menuitem "bar-chart 学习统计" [ref=e24] [cursor=pointer]:
+            - img "bar-chart" [ref=e25]:
+              - img [ref=e26]
+            - generic [ref=e28]: 学习统计
+          - menuitem "file-done 试卷生成" [ref=e29] [cursor=pointer]:
+            - img "file-done" [ref=e30]:
+              - img [ref=e31]
+            - generic [ref=e33]: 试卷生成
+    - generic [ref=e34]:
+      - banner [ref=e35]:
+        - generic [ref=e36]: 费曼学习法智能平台
+        - generic [ref=e38] [cursor=pointer]:
+          - img "user" [ref=e40]:
+            - img [ref=e41]
+          - generic [ref=e43]: test-user-123
+      - main [ref=e44]:
+        - generic [ref=e270]:
+          - generic [ref=e272]:
+            - generic [ref=e273]: 学习资料管理
+            - generic [ref=e275]:
+              - button "upload 上传文件" [disabled] [ref=e280]:
+                - generic:
+                  - img "upload":
+                    - img
+                - generic: 上传文件
+              - button "search AI 搜索" [disabled] [ref=e282]:
+                - generic:
+                  - img "search":
+                    - img
+                - generic: AI 搜索
+          - generic [ref=e283]:
+            - generic [ref=e285] [cursor=pointer]:
+              - generic [ref=e287]:
+                - combobox [expanded] [active] [ref=e289]:
+                  - listbox:
+                    - option "测试学习目标": 53806fe38aa0b5f44ad29b6efc52f82a
+                - generic: 选择学习目标
+              - generic:
+                - img:
+                  - img
+            - generic [ref=e290]: 请先选择学习目标
+  - generic "测试学习目标" [ref=e297] [cursor=pointer]:
+    - generic [ref=e298]: 测试学习目标

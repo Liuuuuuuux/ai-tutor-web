@@ -1,0 +1,31 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - heading "AI Tutor" [level=1] [ref=e7]
+    - paragraph [ref=e8]: MVP auth
+  - generic [ref=e9]:
+    - tablist [ref=e10]:
+      - generic [ref=e12]:
+        - tab "Login" [selected] [ref=e14] [cursor=pointer]
+        - tab "Register" [ref=e16] [cursor=pointer]
+    - generic:
+      - generic:
+        - tabpanel "Login"
+  - generic [ref=e17]:
+    - generic [ref=e19]:
+      - generic "Username" [ref=e21]: "* Username"
+      - generic [ref=e25]:
+        - img "user" [ref=e27]:
+          - img [ref=e28]
+        - textbox "* Username" [ref=e30]:
+          - /placeholder: Username
+    - generic [ref=e32]:
+      - generic "Password" [ref=e34]: "* Password"
+      - generic [ref=e38]:
+        - img "lock" [ref=e40]:
+          - img [ref=e41]
+        - textbox "* Password" [ref=e43]:
+          - /placeholder: Password
+        - img "eye-invisible" [ref=e45] [cursor=pointer]:
+          - img [ref=e46]
+    - button "Login" [ref=e54] [cursor=pointer]:
+      - generic [ref=e55]: Login

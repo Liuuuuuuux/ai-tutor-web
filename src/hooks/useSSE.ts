@@ -89,14 +89,16 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
 
           for (const line of lines) {
             if (line.startsWith('data:')) {
+              // 标准 SSE 格式: data: xxx
               const data = line.slice(5).trim();
               if (data) {
                 accumulatedContentRef.current += data;
                 setStreamingContent(accumulatedContentRef.current);
               }
-            } else if (line.trim() && !line.startsWith(':')) {
-              // 如果不是 SSE 格式，直接作为内容
-              accumulatedContentRef.current += line;
+            } else if (line.trim()) {
+              // 非 SSE 格式（如 Spring SseEmitter 直接发送的纯文本）
+              // 直接追加内容
+              accumulatedContentRef.current += line + '\n';
               setStreamingContent(accumulatedContentRef.current);
             }
           }

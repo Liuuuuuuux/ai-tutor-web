@@ -1,0 +1,14 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - heading "AI Tutor" [level=1] [ref=e7]
+    - paragraph [ref=e8]: 费曼学习法智能平台
+  - generic [ref=e9]:
+    - generic [ref=e15]:
+      - img "user" [ref=e17]:
+        - img [ref=e18]
+      - textbox "请输入用户名" [ref=e20]: testuser
+    - button "登 录" [active] [ref=e26] [cursor=pointer]:
+      - generic [ref=e27]: 登 录
+  - generic [ref=e28]:
+    - paragraph [ref=e29]: 提示：输入用户名即可登录
+    - paragraph [ref=e30]: 新用户会自动创建账号

@@ -43,6 +43,11 @@ const statusConfig: Record<number, { color: string; text: string }> = {
   [KnowledgePointStatus.MASTERED]: { color: 'success', text: '已掌握' },
 };
 
+// 获取状态配置，提供默认值
+const getStatusConfig = (status: number) => {
+  return statusConfig[status] ?? { color: 'default', text: '未知' };
+};
+
 export function KnowledgePointsPage() {
   const { goalId } = useParams<{ goalId: string }>();
   const navigate = useNavigate();
@@ -61,6 +66,8 @@ export function KnowledgePointsPage() {
   const [editForm] = Form.useForm();
 
   const { data: knowledgePoints, isLoading } = useKnowledgePoints(goalId || '');
+  // 确保 knowledgePoints 始终是数组
+  const safeKnowledgePoints = Array.isArray(knowledgePoints) ? knowledgePoints : [];
   const generateMutation = useGenerateKnowledgePoints();
   const confirmMutation = useConfirmKnowledgePoints();
   const regenerateMutation = useRegenerateKnowledgePoints();
@@ -70,6 +77,10 @@ export function KnowledgePointsPage() {
   const updateMutation = useUpdateKnowledgePoint();
 
   const handleSelect = (point: KnowledgePoint) => {
+    if (!goalId || !point.id) {
+      console.error('Missing goalId or pointId');
+      return;
+    }
     navigate(`/learning-session/${goalId}/${point.id}`);
   };
 
@@ -228,14 +239,14 @@ export function KnowledgePointsPage() {
           <div className="flex justify-center items-center h-64">
             <Spin size="large" />
           </div>
-        ) : knowledgePoints && knowledgePoints.length > 0 ? (
+        ) : safeKnowledgePoints.length > 0 ? (
           <List
-            dataSource={knowledgePoints}
+            dataSource={safeKnowledgePoints}
             renderItem={(point: KnowledgePoint) => (
               <List.Item
                 actions={[
-                  <Tag key="status" color={statusConfig[point.status]?.color}>
-                    {statusConfig[point.status]?.text}
+                  <Tag key="status" color={getStatusConfig(point.status).color}>
+                    {getStatusConfig(point.status).text}
                   </Tag>,
                   <Button key="learn" type="link" onClick={() => handleSelect(point)}>
                     学习

@@ -182,6 +182,14 @@ export function useCurrentSession(pointId: string) {
   });
 }
 
+export function useHistorySessions(pointId: string) {
+  return useQuery({
+    queryKey: ['history-sessions', pointId],
+    queryFn: () => api.getHistorySessions(pointId),
+    enabled: !!pointId,
+  });
+}
+
 // 获取会话消息（从会话详情中获取）
 export function useSessionMessages(sessionId: string) {
   const { data: session } = useLearningSession(sessionId);

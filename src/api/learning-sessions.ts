@@ -28,3 +28,8 @@ export function completeSession(id: string): Promise<SessionCompleteResult> {
 export function setSearchScope(sessionId: string, scope: string): Promise<boolean> {
   return request.post(`/learning-sessions/${sessionId}/search-config`, { searchScope: scope });
 }
+
+// 获取历史会话列表
+export function getHistorySessions(pointId: string): Promise<LearningSession[]> {
+  return request.get('/learning-sessions/history', { params: { pointId } });
+}

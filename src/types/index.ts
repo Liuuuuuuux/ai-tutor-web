@@ -91,6 +91,8 @@ export interface LearningSession {
   pointTitle?: string;
   mode: string; // TEACHING/COACH
   status: number; // 0-进行中，1-已完成
+  masteryScore?: number;
+  summary?: string;
   openingMessage?: string;
   messages?: SessionMessage[];
   createTime: string;
