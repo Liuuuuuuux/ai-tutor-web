@@ -1,14 +1,13 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   BookOutlined,
   CheckCircleOutlined,
   HistoryOutlined,
-  MenuOutlined,
   RobotOutlined,
   UserOutlined,
   BulbOutlined,
+  LeftOutlined,
 } from '@ant-design/icons';
 import {
   Avatar,
@@ -17,7 +16,6 @@ import {
   Empty,
   List,
   Modal,
-  Progress,
   Result,
   Segmented,
   Space,
@@ -89,12 +87,11 @@ export function LearningSessionPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [resolvedPointId, setResolvedPointId] = useState<string | null>(pointId || null);
+  const [resolvedPointId] = useState<string | null>(pointId || null);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [completeResult, setCompleteResult] = useState<SessionCompleteResult | null>(null);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [viewingSession, setViewingSession] = useState<LearningSession | null>(null);
-  const [showNavigator, setShowNavigator] = useState(false);
 
   const lastSessionRequestRef = useRef<string | null>(null);
   const lastSyncedSessionIdRef = useRef<string | null>(null);
@@ -219,25 +216,9 @@ export function LearningSessionPage() {
   const selectedPoint = knowledgePoint || flatPoints.find((point) => point.id === activePointId);
   const selectedPointStatus =
     selectedPoint?.status !== undefined ? pointStatusConfig[selectedPoint.status] : undefined;
-  const masteredCount = flatPoints.filter(
-    (point) => point.status === KnowledgePointStatus.MASTERED
-  ).length;
-  const learningCount = flatPoints.filter(
-    (point) => point.status === KnowledgePointStatus.LEARNING
-  ).length;
-  const notStartedCount = flatPoints.filter(
-    (point) => point.status === KnowledgePointStatus.NOT_STARTED
-  ).length;
 
   const handleBack = () => {
     navigate('/learning-goals');
-  };
-
-  const handleSelectPoint = (point: KnowledgePoint) => {
-    if (!goalId || !point.id || point.id === activePointId) return;
-    setShowNavigator(false);
-    setResolvedPointId(point.id);
-    navigate(`/learning-session/${goalId}/${point.id}`);
   };
 
   const handleModeChange = (newMode: 'TEACHING' | 'COACH') => {
@@ -278,40 +259,6 @@ export function LearningSessionPage() {
     isKnowledgeTreeLoading ||
     (Boolean(activePointId) &&
       (isKnowledgePointLoading || isCurrentSessionLoading || (isCreatingSession && !sessionId)));
-
-  const renderPointNodes = (points: KnowledgePoint[], level = 0): ReactNode =>
-    points.map((point) => {
-      const isActive = point.id === activePointId;
-      return (
-        <div key={point.id} className={level > 0 ? 'ml-3 border-l border-stone-200 pl-3' : ''}>
-          <button
-            type="button"
-            onClick={() => handleSelectPoint(point)}
-            className={`mb-2 w-full rounded-2xl border px-4 py-3 text-left transition ${
-              isActive
-                ? 'border-blue-200 bg-blue-50 shadow-sm'
-                : 'border-transparent bg-white hover:border-stone-200 hover:bg-stone-50'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium text-slate-900">{point.title}</div>
-                {point.description && (
-                  <div className="mt-1 text-xs leading-5 text-slate-500">{point.description}</div>
-                )}
-              </div>
-              <Tag color={pointStatusConfig[point.status]?.color}>
-                {pointStatusConfig[point.status]?.text}
-              </Tag>
-            </div>
-            <div className="mt-2 text-xs text-slate-400">{point.masteryLevel || 0}%</div>
-          </button>
-          {point.children?.length ? (
-            <div className="space-y-2">{renderPointNodes(point.children, level + 1)}</div>
-          ) : null}
-        </div>
-      );
-    });
 
   const renderSessionPreview = (sessionItem: LearningSession) => (
     <div className="space-y-4">
@@ -373,15 +320,16 @@ export function LearningSessionPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
+      <div className="flex h-full items-center justify-center">
         <Spin size="large" tip="正在整理你的学习空间..." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full min-h-0 w-full">
       <ChatBox
+        className="h-full w-full"
         sessionId={sessionId || ''}
         initialMessages={
           Array.isArray(session?.messages)
@@ -399,7 +347,7 @@ export function LearningSessionPage() {
         subtitle="把顶层信息收起来，只把当前知识点和对话留在前面。"
         placeholder="直接问我这个知识点，或者让我带你做练习。"
         emptyTitle="当前还没有可聊的知识点"
-        emptyDescription="先在左上角打开抽屉选一个知识点，或者回到学习空间管理页整理知识结构。"
+        emptyDescription="先点击顶部返回按钮回到学习空间，选中一个知识点后就能直接开始聊天。"
         emptyAction={
           <Space wrap>
             <Button onClick={() => navigate('/knowledge-points/' + (goalId || ''))}>
@@ -411,98 +359,66 @@ export function LearningSessionPage() {
           </Space>
         }
         header={
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
+          <div className="space-y-4">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
               <Button
                 type="text"
-                icon={<MenuOutlined />}
-                onClick={() => setShowNavigator(true)}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-stone-200 bg-white/90"
-              />
-              <div className="min-w-0">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                  Learning Space
-                </div>
-                <div className="truncate text-base font-semibold text-slate-900">
-                  {goal?.title || '学习空间'} · {selectedPoint?.title || '请选择知识点'}
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <Tag color={selectedPointStatus?.color || 'default'} className="mr-0">
-                    {selectedPointStatus?.text || '待选择'}
-                  </Tag>
-                  <span>直接聊天，不再堆叠多层页面。</span>
-                </div>
+                icon={<LeftOutlined />}
+                onClick={handleBack}
+                className="h-10 rounded-2xl border border-stone-200 bg-white/90 px-4 text-slate-700 shadow-sm"
+              >
+                返回
+              </Button>
+
+              <div className="flex justify-center">
+                <Segmented
+                  value={mode}
+                  options={[
+                    { label: '教学模式', value: 'TEACHING', icon: <BookOutlined /> },
+                    { label: '引导模式', value: 'COACH', icon: <BulbOutlined /> },
+                  ]}
+                  onChange={(value) => handleModeChange(value as 'TEACHING' | 'COACH')}
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Space wrap>
+                  <Button
+                    type="text"
+                    icon={<HistoryOutlined />}
+                    onClick={() => setShowHistoryDrawer(true)}
+                    disabled={!activePointId}
+                  >
+                    历史
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<CheckCircleOutlined />}
+                    onClick={handleComplete}
+                    loading={completeSessionMutation.isPending}
+                    disabled={!sessionId}
+                  >
+                    完成学习
+                  </Button>
+                </Space>
               </div>
             </div>
 
-            <Space wrap>
-              <Segmented
-                value={mode}
-                options={[
-                  { label: '教学模式', value: 'TEACHING', icon: <BookOutlined /> },
-                  { label: '引导模式', value: 'COACH', icon: <BulbOutlined /> },
-                ]}
-                onChange={(value) => handleModeChange(value as 'TEACHING' | 'COACH')}
-              />
-              <Button
-                type="text"
-                icon={<HistoryOutlined />}
-                onClick={() => setShowHistoryDrawer(true)}
-                disabled={!activePointId}
-              >
-                历史
-              </Button>
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                onClick={handleComplete}
-                loading={completeSessionMutation.isPending}
-                disabled={!sessionId}
-              >
-                完成学习
-              </Button>
-            </Space>
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                Learning Space
+              </div>
+              <span>·</span>
+              <div className="truncate text-sm font-semibold text-slate-900">
+                {goal?.title || '学习空间'} · {selectedPoint?.title || '请选择知识点'}
+              </div>
+              <Tag color={selectedPointStatus?.color || 'default'} className="mr-0">
+                {selectedPointStatus?.text || '待选择'}
+              </Tag>
+            </div>
           </div>
         }
       />
-
-      <Drawer
-        title={goal?.title || '学习空间'}
-        open={showNavigator}
-        onClose={() => setShowNavigator(false)}
-        width={420}
-        placement="left"
-        footer={
-          <Button block onClick={handleBack}>
-            返回学习空间列表
-          </Button>
-        }
-      >
-        <div className="space-y-4">
-          <div className="rounded-3xl border border-stone-200 bg-stone-50 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-slate-400">知识点数</div>
-                <div className="mt-1 text-lg font-semibold text-slate-900">{flatPoints.length}</div>
-              </div>
-              <Progress type="circle" percent={goal?.progress || 0} size={64} />
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs text-slate-500">
-              <div className="rounded-2xl bg-white px-2 py-3">{notStartedCount} 未开始</div>
-              <div className="rounded-2xl bg-white px-2 py-3">{learningCount} 学习中</div>
-              <div className="rounded-2xl bg-white px-2 py-3">{masteredCount} 已掌握</div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {flatPoints.length > 0 ? (
-              renderPointNodes(Array.isArray(knowledgeTree) ? knowledgeTree : [])
-            ) : (
-              <Empty description="还没有知识点，先去管理页整理一下" />
-            )}
-          </div>
-        </div>
-      </Drawer>
 
       <Drawer
         title="历史记录"

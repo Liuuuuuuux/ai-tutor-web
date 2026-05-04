@@ -70,8 +70,8 @@ export function MainLayout() {
   if (isImmersiveSession) {
     return (
       <Layout className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.1),transparent_28%),linear-gradient(180deg,#ffffff_0%,#f8fbff_48%,#eef4fb_100%)]">
-        <Content className="relative p-4 md:p-6 lg:p-8">
-          <div className="mx-auto max-w-[1600px]">
+        <Content className="relative h-screen overflow-hidden p-0">
+          <div className="h-full">
             <Outlet />
           </div>
         </Content>

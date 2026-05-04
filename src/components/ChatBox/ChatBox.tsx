@@ -35,7 +35,7 @@ export function ChatBox({
   subtitle = '围绕当前知识点持续追问、讲解和练习',
   placeholder = '直接输入你想问的问题，或者让 AI 带你一步一步学。',
   emptyTitle = '先选一个知识点开始聊天',
-  emptyDescription = '当前还没有可聊的会话。打开左上角的小标志，挑一个知识点后就能直接开始。',
+  emptyDescription = '当前还没有可聊的会话。返回学习空间选择知识点后，就能直接开始。',
   emptyAction,
   quickPrompts = defaultQuickPrompts,
 }: ChatBoxProps) {
@@ -162,9 +162,38 @@ export function ChatBox({
     </Button>
   );
 
+  const hasConversation = displayMessages.length > 0 || isStreaming || Boolean(streamingContent);
+
+  const renderComposer = () => (
+    <div className="w-full">
+      <div className="flex items-end gap-3 rounded-[28px] border border-stone-200 bg-white/95 p-3 shadow-sm focus-within:border-[#2563eb] focus-within:ring-2 focus-within:ring-[#2563eb]/10">
+        <TextArea
+          ref={inputRef}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          autoSize={{ minRows: 1, maxRows: 5 }}
+          className="flex-1 border-none bg-transparent p-0 shadow-none"
+          disabled={isStreaming || !sessionId}
+        />
+        <Button
+          type="primary"
+          icon={isStreaming ? <Spin size="small" /> : <SendOutlined />}
+          onClick={() => handleSend()}
+          disabled={!inputValue.trim() || isStreaming || !sessionId}
+          className="h-11 rounded-full px-5"
+        >
+          发送
+        </Button>
+      </div>
+      <p className="mt-2 text-xs text-slate-400">Enter 发送，Shift + Enter 换行</p>
+    </div>
+  );
+
   return (
     <div
-      className={`flex h-full min-h-[680px] flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_30px_90px_-40px_rgba(15,23,42,0.18)] backdrop-blur-xl ${className}`}
+      className={`flex h-full w-full min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] ${className}`}
     >
       <div className="border-b border-slate-200/80 bg-white/75 px-5 py-4 backdrop-blur">
         {header ?? renderDefaultHeader()}
@@ -182,8 +211,8 @@ export function ChatBox({
             </div>
             {emptyStateAction}
           </div>
-        ) : displayMessages.length === 0 && !isStreaming ? (
-          <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-6 py-20 text-center">
+        ) : !hasConversation ? (
+          <div className="mx-auto flex h-full w-full max-w-2xl flex-col items-center justify-center gap-6 py-20 text-center">
             <div className="rounded-[28px] bg-blue-50 p-4 text-3xl text-[#2563eb] shadow-sm">
               <RobotOutlined />
             </div>
@@ -197,13 +226,17 @@ export function ChatBox({
               {quickPrompts.map((prompt) => (
                 <Button
                   key={prompt}
-                  onClick={() => setInputValue(prompt)}
+                  onClick={() => {
+                    setInputValue(prompt);
+                    inputRef.current?.focus();
+                  }}
                   className="rounded-full border-stone-200 bg-white/90"
                 >
                   {prompt}
                 </Button>
               ))}
             </div>
+            <div className="w-full max-w-4xl">{renderComposer()}</div>
           </div>
         ) : (
           <div className="mx-auto flex max-w-4xl flex-col gap-4">
@@ -214,32 +247,11 @@ export function ChatBox({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-stone-200/80 bg-white/80 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-end gap-3 rounded-[28px] border border-stone-200 bg-white/95 p-3 shadow-sm focus-within:border-[#2563eb] focus-within:ring-2 focus-within:ring-[#2563eb]/10">
-          <TextArea
-            ref={inputRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            autoSize={{ minRows: 1, maxRows: 5 }}
-            className="flex-1 border-none bg-transparent p-0 shadow-none"
-            disabled={isStreaming || !sessionId}
-          />
-          <Button
-            type="primary"
-            icon={isStreaming ? <Spin size="small" /> : <SendOutlined />}
-            onClick={() => handleSend()}
-            disabled={!inputValue.trim() || isStreaming || !sessionId}
-            className="h-11 rounded-full px-5"
-          >
-            发送
-          </Button>
+      {hasConversation && sessionId ? (
+        <div className="border-t border-stone-200/80 bg-white/80 px-4 py-4 backdrop-blur">
+          <div className="mx-auto w-full max-w-4xl">{renderComposer()}</div>
         </div>
-        <p className="mx-auto mt-2 max-w-4xl text-xs text-slate-400">
-          Enter 发送，Shift + Enter 换行
-        </p>
-      </div>
+      ) : null}
     </div>
   );
 }
