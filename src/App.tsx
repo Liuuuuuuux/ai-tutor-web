@@ -13,18 +13,16 @@ import { MaterialsPage } from '@/features/materials';
 import { LearningStatsPage } from '@/features/learning-stats';
 import { ExamPage } from '@/features/exam';
 
-// 创建 Query Client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 分钟
+      staleTime: 5 * 60 * 1000,
     },
   },
 });
 
-// 路由守卫组件
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const userId = localStorage.getItem('userId');
   if (!userId) {
@@ -33,7 +31,6 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// 登录路由守卫
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const userId = localStorage.getItem('userId');
   if (userId) {
@@ -50,8 +47,16 @@ function App() {
           locale={zhCN}
           theme={{
             token: {
-              colorPrimary: '#0f766e',
-              borderRadius: 16,
+              colorPrimary: '#2563eb',
+              colorInfo: '#2563eb',
+              colorSuccess: '#2563eb',
+              colorWarning: '#f59e0b',
+              colorError: '#ef4444',
+              colorBgLayout: '#f8fafc',
+              colorBgContainer: '#ffffff',
+              colorBorder: '#dbe3f0',
+              colorTextBase: '#0f172a',
+              borderRadius: 14,
               fontFamily: '"Aptos", "PingFang SC", "Microsoft YaHei UI", sans-serif',
             },
             components: {
@@ -61,12 +66,17 @@ function App() {
               Button: {
                 borderRadius: 999,
               },
+              Modal: {
+                borderRadiusLG: 24,
+              },
+              Drawer: {
+                borderRadiusLG: 24,
+              },
             },
           }}
         >
           <BrowserRouter>
             <Routes>
-              {/* 登录页 - 无 Layout */}
               <Route
                 path="/login"
                 element={
@@ -76,7 +86,6 @@ function App() {
                 }
               />
 
-              {/* 主应用 - 带 Layout */}
               <Route
                 element={
                   <PrivateRoute>
@@ -88,6 +97,7 @@ function App() {
                 <Route path="/learning-goals" element={<LearningGoalsPage />} />
                 <Route path="/learning-goals/:id" element={<LearningGoalDetailPage />} />
                 <Route path="/knowledge-points/:goalId" element={<KnowledgePointsPage />} />
+                <Route path="/learning-session/:goalId" element={<LearningSessionPage />} />
                 <Route
                   path="/learning-session/:goalId/:pointId"
                   element={<LearningSessionPage />}
@@ -97,7 +107,6 @@ function App() {
                 <Route path="/exam" element={<ExamPage />} />
               </Route>
 
-              {/* 兜底路由 */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

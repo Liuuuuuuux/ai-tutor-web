@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRightOutlined,
@@ -18,9 +18,9 @@ import type { LearningGoal } from '@/types';
 import type { ColumnsType } from 'antd/es/table';
 
 const statusConfig: Record<number, { color: string; text: string }> = {
-  0: { color: 'processing', text: '进行中' },
-  1: { color: 'success', text: '已完成' },
-  2: { color: 'warning', text: '已暂停' },
+  0: { color: '#2563eb', text: '进行中' },
+  1: { color: '#1d4ed8', text: '已完成' },
+  2: { color: '#ca8a04', text: '已暂停' },
 };
 
 export function LearningGoalsPage() {
@@ -64,7 +64,7 @@ export function LearningGoalsPage() {
   };
 
   const handleStartLearning = (goal: LearningGoal) => {
-    navigate(`/knowledge-points/${goal.id}`);
+    navigate(`/learning-session/${goal.id}`);
   };
 
   const columns: ColumnsType<LearningGoal> = [
@@ -108,7 +108,7 @@ export function LearningGoalsPage() {
             icon={<PlayCircleOutlined />}
             onClick={() => handleStartLearning(record)}
           >
-            进入
+            进入聊天
           </Button>
           <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
@@ -125,15 +125,15 @@ export function LearningGoalsPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border-0 bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_100%)] text-white shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]">
+      <Card className="overflow-hidden border-0 bg-[linear-gradient(135deg,#0f172a_0%,#2563eb_100%)] text-slate-900 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.18)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/60">
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600">
               Learning Space
             </div>
             <h1 className="mt-2 text-3xl font-semibold">学习空间管理</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-white/75">
-              在这里创建、编辑和进入你的课程空间。每个空间都可以继续拆成知识点，再进入聊天式学习。
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+              在这里创建、编辑和进入你的课程空间。进入后会直接打开聊天页。
             </p>
           </div>
           <Button size="large" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
@@ -179,7 +179,7 @@ export function LearningGoalsPage() {
             <Input placeholder="例如：英语、Java、网络基础" />
           </Form.Item>
           <Form.Item name="description" label="描述">
-            <Input.TextArea rows={4} placeholder="写下这个学习空间要学什么、适合谁、预计怎么学" />
+            <Input.TextArea rows={4} placeholder="写下这个学习空间要学什么、适合谁、预计怎么学。" />
           </Form.Item>
         </Form>
       </Modal>

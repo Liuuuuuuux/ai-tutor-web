@@ -1,19 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeftOutlined,
+  BookOutlined,
   CheckCircleOutlined,
   HistoryOutlined,
+  MenuOutlined,
   RobotOutlined,
   UserOutlined,
-  BookOutlined,
   BulbOutlined,
 } from '@ant-design/icons';
 import {
   Avatar,
   Button,
-  Card,
-  Descriptions,
+  Drawer,
   Empty,
   List,
   Modal,
@@ -24,7 +24,7 @@ import {
   Spin,
   Tag,
 } from 'antd';
-import { ChatBox, KnowledgeTree, MarkdownRenderer } from '@/components';
+import { ChatBox, MarkdownRenderer } from '@/components';
 import {
   useCompleteSession,
   useCurrentSession,
@@ -36,71 +36,123 @@ import {
   useCreateLearningSession,
 } from '@/hooks';
 import { useLearningStore } from '@/stores';
-import type { ChatMessage, LearningSession, SessionCompleteResult, SessionMessage } from '@/types';
+import type {
+  ChatMessage,
+  KnowledgePoint,
+  LearningSession,
+  SessionCompleteResult,
+  SessionMessage,
+} from '@/types';
 import { KnowledgePointStatus, LearningSessionStatus } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 
 const isLearningMode = (value: string): value is 'TEACHING' | 'COACH' =>
   value === 'TEACHING' || value === 'COACH';
 
+const pointStatusConfig: Record<number, { color: string; text: string }> = {
+  [KnowledgePointStatus.NOT_STARTED]: { color: 'default', text: '未开始' },
+  [KnowledgePointStatus.LEARNING]: { color: 'processing', text: '学习中' },
+  [KnowledgePointStatus.MASTERED]: { color: 'blue', text: '已掌握' },
+};
+
+const flattenPoints = (points: KnowledgePoint[]): KnowledgePoint[] =>
+  points.reduce<KnowledgePoint[]>((acc, point) => {
+    acc.push(point);
+    if (point.children) {
+      acc.push(...flattenPoints(point.children));
+    }
+    return acc;
+  }, []);
+
+const findDefaultPoint = (points: KnowledgePoint[]) => {
+  const allPoints = flattenPoints(points);
+  return (
+    allPoints.find((point) => point.status === KnowledgePointStatus.LEARNING) ||
+    allPoints.find((point) => point.status === KnowledgePointStatus.NOT_STARTED) ||
+    allPoints[0] ||
+    null
+  );
+};
+
+const formatTime = (time: string | undefined) => {
+  if (!time) return '';
+  return new Date(time).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 export function LearningSessionPage() {
-  const { goalId, pointId } = useParams<{ goalId: string; pointId: string }>();
+  const { goalId, pointId } = useParams<{ goalId: string; pointId?: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [resolvedPointId, setResolvedPointId] = useState<string | null>(pointId || null);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [completeResult, setCompleteResult] = useState<SessionCompleteResult | null>(null);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [viewingSession, setViewingSession] = useState<LearningSession | null>(null);
+  const [showNavigator, setShowNavigator] = useState(false);
 
-  const hasInitialized = useRef(false);
+  const lastSessionRequestRef = useRef<string | null>(null);
+  const lastSyncedSessionIdRef = useRef<string | null>(null);
+  const lastSyncedPointIdRef = useRef<string | null>(null);
   const isModeSwitching = useRef(false);
 
-  const { mode, setMode, setCurrentSession, setCurrentKnowledgePoint } = useLearningStore();
-  const createSessionMutation = useCreateLearningSession();
+  const mode = useLearningStore((state) => state.mode);
+  const setMode = useLearningStore((state) => state.setMode);
+  const setCurrentSession = useLearningStore((state) => state.setCurrentSession);
+  const setCurrentKnowledgePoint = useLearningStore((state) => state.setCurrentKnowledgePoint);
+  const { mutate: createSession, isPending: isCreatingSession } = useCreateLearningSession();
   const completeSessionMutation = useCompleteSession();
 
-  const { data: goal } = useLearningGoal(goalId || '');
-  const { data: knowledgePoint, isLoading: isKnowledgePointLoading } = useKnowledgePoint(
-    pointId || ''
-  );
+  const { data: goal, isLoading: isGoalLoading } = useLearningGoal(goalId || '');
   const { data: knowledgeTree, isLoading: isKnowledgeTreeLoading } = useKnowledgePoints(
     goalId || ''
   );
-  const { data: currentSession, isLoading: isCurrentSessionLoading } = useCurrentSession(
-    pointId || ''
-  );
-  const { data: historySessions } = useHistorySessions(pointId || '');
+  const activePointId = pointId || resolvedPointId || '';
+  const { data: knowledgePoint, isLoading: isKnowledgePointLoading } =
+    useKnowledgePoint(activePointId);
+  const { data: currentSession, isLoading: isCurrentSessionLoading } =
+    useCurrentSession(activePointId);
+  const sessionId = currentSession?.id || '';
+  const { data: historySessions } = useHistorySessions(activePointId);
   const { data: session } = useLearningSession(sessionId || '');
 
-  const messages: ChatMessage[] = useMemo(() => {
-    const sessionMessages = session?.messages;
-    if (!sessionMessages || !Array.isArray(sessionMessages)) return [];
+  useEffect(() => {
+    if (pointId || resolvedPointId) return;
+    if (!goalId || isKnowledgeTreeLoading) return;
+    if (!Array.isArray(knowledgeTree) || knowledgeTree.length === 0) return;
 
-    return sessionMessages.map((msg: SessionMessage, index: number) => ({
-      id: `${sessionId || 'session'}-${index}`,
-      sessionId: sessionId || '',
-      role: msg.role,
-      content: msg.content,
-      createdAt: msg.createTime || new Date().toISOString(),
-    }));
-  }, [session?.messages, sessionId]);
+    const defaultPoint = findDefaultPoint(knowledgeTree);
+    if (!defaultPoint?.id) return;
+
+    navigate(`/learning-session/${goalId}/${defaultPoint.id}`, { replace: true });
+  }, [goalId, isKnowledgeTreeLoading, knowledgeTree, navigate, pointId, resolvedPointId]);
 
   useEffect(() => {
-    if (hasInitialized.current) return;
-    if (!pointId) return;
+    if (!activePointId) return;
     if (isCurrentSessionLoading) return;
 
     if (isModeSwitching.current) {
-      isModeSwitching.current = false;
-      hasInitialized.current = true;
-      createSessionMutation.mutate(
-        { pointId, mode },
+      const requestKey = `${activePointId}:${mode}`;
+      if (isCreatingSession || lastSessionRequestRef.current === requestKey) {
+        return;
+      }
+
+      lastSessionRequestRef.current = requestKey;
+      createSession(
+        { pointId: activePointId, mode },
         {
           onSuccess: (newSession) => {
-            setSessionId(newSession.id);
+            isModeSwitching.current = false;
+            lastSyncedSessionIdRef.current = newSession.id;
             setCurrentSession(newSession);
+          },
+          onError: () => {
+            lastSessionRequestRef.current = null;
           },
         }
       );
@@ -108,53 +160,84 @@ export function LearningSessionPage() {
     }
 
     if (currentSession) {
-      hasInitialized.current = true;
-      setSessionId(currentSession.id);
-      setCurrentSession(currentSession);
-      if (isLearningMode(currentSession.mode)) {
+      lastSessionRequestRef.current = `${activePointId}:${currentSession.mode}`;
+
+      if (lastSyncedSessionIdRef.current !== currentSession.id) {
+        lastSyncedSessionIdRef.current = currentSession.id;
+        setCurrentSession(currentSession);
+      }
+
+      if (isLearningMode(currentSession.mode) && currentSession.mode !== mode) {
         setMode(currentSession.mode);
       }
+
       return;
     }
 
-    if (!createSessionMutation.isPending) {
-      hasInitialized.current = true;
-      createSessionMutation.mutate(
-        { pointId, mode },
-        {
-          onSuccess: (newSession) => {
-            setSessionId(newSession.id);
-            setCurrentSession(newSession);
-          },
-        }
-      );
+    const requestKey = `${activePointId}:${mode}`;
+    if (lastSessionRequestRef.current === requestKey || isCreatingSession) {
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pointId, currentSession, isCurrentSessionLoading, mode]);
+
+    lastSessionRequestRef.current = requestKey;
+    createSession(
+      { pointId: activePointId, mode },
+      {
+        onSuccess: (newSession) => {
+          lastSyncedSessionIdRef.current = newSession.id;
+          setCurrentSession(newSession);
+        },
+        onError: () => {
+          lastSessionRequestRef.current = null;
+        },
+      }
+    );
+  }, [
+    activePointId,
+    createSession,
+    currentSession,
+    isCreatingSession,
+    isCurrentSessionLoading,
+    mode,
+    sessionId,
+    setCurrentSession,
+    setMode,
+  ]);
 
   useEffect(() => {
-    if (knowledgePoint) {
+    if (knowledgePoint && lastSyncedPointIdRef.current !== knowledgePoint.id) {
+      lastSyncedPointIdRef.current = knowledgePoint.id;
       setCurrentKnowledgePoint(knowledgePoint);
     }
   }, [knowledgePoint, setCurrentKnowledgePoint]);
 
+  const flatPoints = useMemo(
+    () => (Array.isArray(knowledgeTree) ? flattenPoints(knowledgeTree) : []),
+    [knowledgeTree]
+  );
+
+  const selectedPoint = knowledgePoint || flatPoints.find((point) => point.id === activePointId);
+  const selectedPointStatus =
+    selectedPoint?.status !== undefined ? pointStatusConfig[selectedPoint.status] : undefined;
+  const masteredCount = flatPoints.filter(
+    (point) => point.status === KnowledgePointStatus.MASTERED
+  ).length;
+  const learningCount = flatPoints.filter(
+    (point) => point.status === KnowledgePointStatus.LEARNING
+  ).length;
+  const notStartedCount = flatPoints.filter(
+    (point) => point.status === KnowledgePointStatus.NOT_STARTED
+  ).length;
+
   const handleBack = () => {
-    navigate(`/knowledge-points/${goalId}`);
+    navigate('/learning-goals');
   };
 
-  const handleViewHistory = (item: LearningSession) => {
-    setViewingSession(item);
-    setShowHistoryModal(true);
-  };
-
-  const formatTime = (time: string | undefined) => {
-    if (!time) return '';
-    return new Date(time).toLocaleString('zh-CN', {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const handleSelectPoint = (point: KnowledgePoint) => {
+    if (!goalId || !point.id || point.id === activePointId) return;
+    setShowNavigator(false);
+    setResolvedPointId(point.id);
+    navigate(`/learning-session/${goalId}/${point.id}`);
   };
 
   const handleModeChange = (newMode: 'TEACHING' | 'COACH') => {
@@ -162,13 +245,13 @@ export function LearningSessionPage() {
 
     Modal.confirm({
       title: '切换学习模式',
-      content: '切换后会重新创建一个新的学习会话，当前会话会保留。确定继续吗？',
+      content: '切换后会为当前知识点开启一段新的会话，之前的记录会保留。继续吗？',
       onOk: () => {
         isModeSwitching.current = true;
         setMode(newMode);
-        setSessionId(null);
         setCurrentSession(null);
-        hasInitialized.current = false;
+        lastSessionRequestRef.current = null;
+        lastSyncedSessionIdRef.current = null;
       },
     });
   };
@@ -184,11 +267,6 @@ export function LearningSessionPage() {
     });
   };
 
-  const handleCompleteModalClose = () => {
-    setShowCompleteModal(false);
-    navigate(`/knowledge-points/${goalId}`);
-  };
-
   const handleMessageSent = () => {
     if (sessionId) {
       queryClient.invalidateQueries({ queryKey: ['learning-session', sessionId] });
@@ -196,216 +274,301 @@ export function LearningSessionPage() {
   };
 
   const isLoading =
-    isKnowledgePointLoading ||
+    isGoalLoading ||
     isKnowledgeTreeLoading ||
-    isCurrentSessionLoading ||
-    createSessionMutation.isPending;
+    (Boolean(activePointId) &&
+      (isKnowledgePointLoading || isCurrentSessionLoading || (isCreatingSession && !sessionId)));
+
+  const renderPointNodes = (points: KnowledgePoint[], level = 0): ReactNode =>
+    points.map((point) => {
+      const isActive = point.id === activePointId;
+      return (
+        <div key={point.id} className={level > 0 ? 'ml-3 border-l border-stone-200 pl-3' : ''}>
+          <button
+            type="button"
+            onClick={() => handleSelectPoint(point)}
+            className={`mb-2 w-full rounded-2xl border px-4 py-3 text-left transition ${
+              isActive
+                ? 'border-blue-200 bg-blue-50 shadow-sm'
+                : 'border-transparent bg-white hover:border-stone-200 hover:bg-stone-50'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium text-slate-900">{point.title}</div>
+                {point.description && (
+                  <div className="mt-1 text-xs leading-5 text-slate-500">{point.description}</div>
+                )}
+              </div>
+              <Tag color={pointStatusConfig[point.status]?.color}>
+                {pointStatusConfig[point.status]?.text}
+              </Tag>
+            </div>
+            <div className="mt-2 text-xs text-slate-400">{point.masteryLevel || 0}%</div>
+          </button>
+          {point.children?.length ? (
+            <div className="space-y-2">{renderPointNodes(point.children, level + 1)}</div>
+          ) : null}
+        </div>
+      );
+    });
+
+  const renderSessionPreview = (sessionItem: LearningSession) => (
+    <div className="space-y-4">
+      <Button type="text" onClick={() => setViewingSession(null)} className="px-0">
+        返回历史列表
+      </Button>
+      <div className="rounded-3xl border border-stone-200 bg-white p-4">
+        <div className="flex items-center gap-2">
+          <Tag color={sessionItem.mode === 'TEACHING' ? 'blue' : 'gold'}>
+            {sessionItem.mode === 'TEACHING' ? '教学模式' : '引导模式'}
+          </Tag>
+          <Tag
+            color={sessionItem.status === LearningSessionStatus.IN_PROGRESS ? 'processing' : 'blue'}
+          >
+            {sessionItem.status === LearningSessionStatus.IN_PROGRESS ? '进行中' : '已完成'}
+          </Tag>
+        </div>
+        <div className="mt-3 text-sm text-slate-500">
+          创建时间：{formatTime(sessionItem.createTime)}
+        </div>
+        <div className="mt-1 text-sm text-slate-500">
+          掌握分数：
+          {sessionItem.masteryScore !== null && sessionItem.masteryScore !== undefined
+            ? `${sessionItem.masteryScore}%`
+            : '-'}
+        </div>
+      </div>
+
+      <div className="max-h-[52vh] overflow-y-auto space-y-3 rounded-3xl border border-stone-200 bg-white p-4">
+        {sessionItem.messages && sessionItem.messages.length > 0 ? (
+          sessionItem.messages.map((msg, index) => {
+            const isUser = msg.role === 'USER' || msg.role?.toUpperCase() === 'USER';
+            return (
+              <div key={index} className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
+                <Avatar
+                  icon={isUser ? <UserOutlined /> : <RobotOutlined />}
+                  style={{ backgroundColor: isUser ? '#2563eb' : '#0f172a' }}
+                />
+                <div
+                  className={`max-w-[75%] rounded-3xl px-4 py-3 text-sm leading-7 ${
+                    isUser ? 'bg-[#2563eb] text-white' : 'bg-slate-50 text-slate-800'
+                  }`}
+                >
+                  {isUser ? (
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  ) : (
+                    <MarkdownRenderer content={msg.content} />
+                  )}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <Empty description="暂无历史对话" />
+        )}
+      </div>
+    </div>
+  );
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Spin size="large" tip="正在准备学习空间..." />
+      <div className="flex items-center justify-center py-24">
+        <Spin size="large" tip="正在整理你的学习空间..." />
       </div>
     );
   }
 
-  const pointStatusText =
-    knowledgePoint?.status === KnowledgePointStatus.MASTERED
-      ? '已掌握'
-      : knowledgePoint?.status === KnowledgePointStatus.LEARNING
-        ? '学习中'
-        : '未开始';
-
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 rounded-[28px] border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur xl:flex-row xl:items-center xl:justify-between">
-        <div className="space-y-2">
-          <Button type="text" icon={<ArrowLeftOutlined />} onClick={handleBack} className="px-0">
-            返回学习空间
-          </Button>
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.26em] text-teal-600">
-              AI Learning Room
-            </div>
-            <h1 className="mt-1 text-2xl font-semibold text-slate-900">
-              {goal?.title || '学习空间'} · {knowledgePoint?.title || '当前知识点'}
-            </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              在这里你可以像使用 ChatGPT 一样，围绕一个知识点持续追问、讲解和练习。
-            </p>
-          </div>
-        </div>
-
-        <Space wrap>
-          <Segmented
-            value={mode}
-            options={[
-              { label: '教学模式', value: 'TEACHING', icon: <BookOutlined /> },
-              { label: '引导模式', value: 'COACH', icon: <BulbOutlined /> },
-            ]}
-            onChange={(value) => handleModeChange(value as 'TEACHING' | 'COACH')}
-          />
-          <Button
-            type="primary"
-            icon={<CheckCircleOutlined />}
-            onClick={handleComplete}
-            loading={completeSessionMutation.isPending}
-            disabled={!sessionId}
-          >
-            完成学习
-          </Button>
-        </Space>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_320px]">
-        <aside className="space-y-4">
-          <Card title="学习空间概览">
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm font-medium text-slate-900">
-                  {goal?.title || '未命名空间'}
+      <ChatBox
+        sessionId={sessionId || ''}
+        initialMessages={
+          Array.isArray(session?.messages)
+            ? (session.messages.map((msg: SessionMessage, index: number) => ({
+                id: `${sessionId || 'session'}-${index}`,
+                sessionId: sessionId || '',
+                role: msg.role,
+                content: msg.content,
+                createdAt: msg.createTime || new Date().toISOString(),
+              })) as ChatMessage[])
+            : []
+        }
+        onMessageSent={handleMessageSent}
+        title="学习对话"
+        subtitle="把顶层信息收起来，只把当前知识点和对话留在前面。"
+        placeholder="直接问我这个知识点，或者让我带你做练习。"
+        emptyTitle="当前还没有可聊的知识点"
+        emptyDescription="先在左上角打开抽屉选一个知识点，或者回到学习空间管理页整理知识结构。"
+        emptyAction={
+          <Space wrap>
+            <Button onClick={() => navigate('/knowledge-points/' + (goalId || ''))}>
+              去整理知识点
+            </Button>
+            <Button type="primary" onClick={() => navigate('/learning-goals')}>
+              返回学习空间
+            </Button>
+          </Space>
+        }
+        header={
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <Button
+                type="text"
+                icon={<MenuOutlined />}
+                onClick={() => setShowNavigator(true)}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-stone-200 bg-white/90"
+              />
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                  Learning Space
                 </div>
-                <div className="mt-1 text-sm leading-6 text-slate-500">
-                  {goal?.description || '暂无描述'}
+                <div className="truncate text-base font-semibold text-slate-900">
+                  {goal?.title || '学习空间'} · {selectedPoint?.title || '请选择知识点'}
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <Tag color={selectedPointStatus?.color || 'default'} className="mr-0">
+                    {selectedPointStatus?.text || '待选择'}
+                  </Tag>
+                  <span>直接聊天，不再堆叠多层页面。</span>
                 </div>
               </div>
-              <Progress percent={goal?.progress || 0} />
-              <Space wrap>
-                <Tag color="processing" className="rounded-full border-0 px-3">
-                  {knowledgeTree?.length || 0} 个知识点
-                </Tag>
-                <Tag color="green" className="rounded-full border-0 px-3">
-                  {mode === 'TEACHING' ? '教学模式' : '引导模式'}
-                </Tag>
-              </Space>
             </div>
-          </Card>
 
-          <Card title="知识点树">
-            <KnowledgeTree
-              data={Array.isArray(knowledgeTree) ? knowledgeTree : []}
-              onSelect={(point) => {
-                if (goalId && point.id) {
-                  navigate(`/learning-session/${goalId}/${point.id}`);
-                }
-              }}
-            />
-          </Card>
-        </aside>
-
-        <main className="min-w-0">
-          <ChatBox
-            sessionId={sessionId || ''}
-            initialMessages={messages}
-            onMessageSent={handleMessageSent}
-            title={knowledgePoint?.title || goal?.title || '学习对话'}
-            subtitle={
-              mode === 'TEACHING'
-                ? '教学模式：你来提问，我来讲解'
-                : '引导模式：AI 先问你，再帮你补齐'
-            }
-            placeholder="直接说你想学什么，或者让 AI 带你把当前知识点讲透"
-          />
-        </main>
-
-        <aside className="space-y-4">
-          {knowledgePoint && (
-            <Card title="当前知识点">
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="名称">{knowledgePoint.title}</Descriptions.Item>
-                <Descriptions.Item label="状态">{pointStatusText}</Descriptions.Item>
-                <Descriptions.Item label="掌握程度">
-                  {knowledgePoint.masteryLevel}%
-                </Descriptions.Item>
-              </Descriptions>
-            </Card>
-          )}
-
-          {session && (
-            <Card title="会话信息">
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="状态">
-                  <Tag
-                    color={
-                      session.status === LearningSessionStatus.IN_PROGRESS
-                        ? 'processing'
-                        : 'success'
-                    }
-                  >
-                    {session.status === LearningSessionStatus.IN_PROGRESS ? '进行中' : '已完成'}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="创建时间">
-                  {formatTime(session.createTime)}
-                </Descriptions.Item>
-                <Descriptions.Item label="掌握分数">
-                  {session.masteryScore !== null && session.masteryScore !== undefined
-                    ? `${session.masteryScore}%`
-                    : '-'}
-                </Descriptions.Item>
-              </Descriptions>
-            </Card>
-          )}
-
-          {historySessions && historySessions.length > 0 && (
-            <Card
-              title={
-                <span>
-                  <HistoryOutlined className="mr-1" />
-                  历史记录
-                </span>
-              }
-            >
-              <List
-                size="small"
-                dataSource={historySessions}
-                renderItem={(item: LearningSession) => (
-                  <List.Item
-                    actions={[
-                      <Button
-                        key="view"
-                        type="link"
-                        size="small"
-                        onClick={() => handleViewHistory(item)}
-                      >
-                        查看
-                      </Button>,
-                    ]}
-                  >
-                    <List.Item.Meta
-                      title={
-                        <Space size={4}>
-                          <Tag color={item.mode === 'TEACHING' ? 'blue' : 'green'}>
-                            {item.mode === 'TEACHING' ? '教学' : '引导'}
-                          </Tag>
-                          <Tag color={item.status === 0 ? 'processing' : 'success'}>
-                            {item.status === 0 ? '进行中' : '已完成'}
-                          </Tag>
-                        </Space>
-                      }
-                      description={
-                        <div className="text-xs">
-                          {item.masteryScore !== null && item.masteryScore !== undefined && (
-                            <div>掌握程度：{item.masteryScore}%</div>
-                          )}
-                          <div>{formatTime(item.createTime)}</div>
-                        </div>
-                      }
-                    />
-                  </List.Item>
-                )}
+            <Space wrap>
+              <Segmented
+                value={mode}
+                options={[
+                  { label: '教学模式', value: 'TEACHING', icon: <BookOutlined /> },
+                  { label: '引导模式', value: 'COACH', icon: <BulbOutlined /> },
+                ]}
+                onChange={(value) => handleModeChange(value as 'TEACHING' | 'COACH')}
               />
-            </Card>
-          )}
-        </aside>
-      </div>
+              <Button
+                type="text"
+                icon={<HistoryOutlined />}
+                onClick={() => setShowHistoryDrawer(true)}
+                disabled={!activePointId}
+              >
+                历史
+              </Button>
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                onClick={handleComplete}
+                loading={completeSessionMutation.isPending}
+                disabled={!sessionId}
+              >
+                完成学习
+              </Button>
+            </Space>
+          </div>
+        }
+      />
+
+      <Drawer
+        title={goal?.title || '学习空间'}
+        open={showNavigator}
+        onClose={() => setShowNavigator(false)}
+        width={420}
+        placement="left"
+        footer={
+          <Button block onClick={handleBack}>
+            返回学习空间列表
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-3xl border border-stone-200 bg-stone-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs uppercase tracking-[0.24em] text-slate-400">知识点数</div>
+                <div className="mt-1 text-lg font-semibold text-slate-900">{flatPoints.length}</div>
+              </div>
+              <Progress type="circle" percent={goal?.progress || 0} size={64} />
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs text-slate-500">
+              <div className="rounded-2xl bg-white px-2 py-3">{notStartedCount} 未开始</div>
+              <div className="rounded-2xl bg-white px-2 py-3">{learningCount} 学习中</div>
+              <div className="rounded-2xl bg-white px-2 py-3">{masteredCount} 已掌握</div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {flatPoints.length > 0 ? (
+              renderPointNodes(Array.isArray(knowledgeTree) ? knowledgeTree : [])
+            ) : (
+              <Empty description="还没有知识点，先去管理页整理一下" />
+            )}
+          </div>
+        </div>
+      </Drawer>
+
+      <Drawer
+        title="历史记录"
+        open={showHistoryDrawer}
+        onClose={() => {
+          setShowHistoryDrawer(false);
+          setViewingSession(null);
+        }}
+        width={440}
+        placement="right"
+      >
+        {viewingSession ? (
+          renderSessionPreview(viewingSession)
+        ) : historySessions && historySessions.length > 0 ? (
+          <List
+            dataSource={historySessions}
+            renderItem={(item: LearningSession) => (
+              <List.Item>
+                <button
+                  type="button"
+                  onClick={() => setViewingSession(item)}
+                  className="w-full rounded-3xl border border-stone-200 bg-white p-4 text-left transition hover:border-blue-200 hover:bg-blue-50/60"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Tag color={item.mode === 'TEACHING' ? 'blue' : 'gold'}>
+                        {item.mode === 'TEACHING' ? '教学' : '引导'}
+                      </Tag>
+                      <Tag color={item.status === 0 ? 'processing' : 'blue'}>
+                        {item.status === 0 ? '进行中' : '已完成'}
+                      </Tag>
+                    </div>
+                    <span className="text-xs text-slate-400">{formatTime(item.createTime)}</span>
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-slate-900">
+                    {item.pointTitle || '未命名知识点'}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {item.masteryScore !== null && item.masteryScore !== undefined
+                      ? `掌握分数 ${item.masteryScore}%`
+                      : '暂无掌握分数'}
+                  </div>
+                </button>
+              </List.Item>
+            )}
+          />
+        ) : (
+          <Empty description="暂无历史记录" />
+        )}
+      </Drawer>
 
       <Modal
         open={showCompleteModal}
         title="学习完成"
-        onCancel={handleCompleteModalClose}
+        onCancel={() => {
+          setShowCompleteModal(false);
+          navigate('/learning-goals');
+        }}
         footer={[
-          <Button key="close" onClick={handleCompleteModalClose}>
+          <Button
+            key="close"
+            onClick={() => {
+              setShowCompleteModal(false);
+              navigate('/learning-goals');
+            }}
+          >
             返回
           </Button>,
         ]}
@@ -414,28 +577,30 @@ export function LearningSessionPage() {
         {completeResult && (
           <div className="space-y-4">
             <Result
-              icon={<CheckCircleOutlined style={{ color: '#16a34a' }} />}
+              icon={<CheckCircleOutlined style={{ color: '#2563eb' }} />}
               title={`本次学习评分：${completeResult.evaluation.masteryScore} 分`}
               subTitle={completeResult.evaluation.encouragement}
             />
 
             {completeResult.evaluation.strengths.length > 0 && (
-              <Card size="small" title="表现良好">
+              <div className="rounded-3xl border border-stone-200 bg-white p-4">
+                <div className="mb-3 text-sm font-medium text-slate-900">表现不错</div>
                 <List
                   size="small"
                   dataSource={completeResult.evaluation.strengths}
                   renderItem={(item) => (
                     <List.Item>
-                      <Tag color="green">优点</Tag>
+                      <Tag color="blue">优点</Tag>
                       {item}
                     </List.Item>
                   )}
                 />
-              </Card>
+              </div>
             )}
 
             {completeResult.evaluation.gapsFound.length > 0 && (
-              <Card size="small" title="待加强">
+              <div className="rounded-3xl border border-stone-200 bg-white p-4">
+                <div className="mb-3 text-sm font-medium text-slate-900">待加强</div>
                 <List
                   size="small"
                   dataSource={completeResult.evaluation.gapsFound}
@@ -446,96 +611,19 @@ export function LearningSessionPage() {
                     </List.Item>
                   )}
                 />
-              </Card>
+              </div>
             )}
 
             {completeResult.evaluation.suggestedReview.length > 0 && (
-              <Card size="small" title="建议复习">
+              <div className="rounded-3xl border border-stone-200 bg-white p-4">
+                <div className="mb-3 text-sm font-medium text-slate-900">建议复习</div>
                 <List
                   size="small"
                   dataSource={completeResult.evaluation.suggestedReview}
                   renderItem={(item) => <List.Item>• {item}</List.Item>}
                 />
-              </Card>
+              </div>
             )}
-          </div>
-        )}
-      </Modal>
-
-      <Modal
-        title="历史学习记录"
-        open={showHistoryModal}
-        onCancel={() => {
-          setShowHistoryModal(false);
-          setViewingSession(null);
-        }}
-        footer={[
-          <Button
-            key="close"
-            onClick={() => {
-              setShowHistoryModal(false);
-              setViewingSession(null);
-            }}
-          >
-            关闭
-          </Button>,
-        ]}
-        width={760}
-      >
-        {viewingSession && (
-          <div>
-            <Descriptions column={2} size="small" className="mb-4">
-              <Descriptions.Item label="学习模式">
-                <Tag color={viewingSession.mode === 'TEACHING' ? 'blue' : 'green'}>
-                  {viewingSession.mode === 'TEACHING' ? '教学模式' : '引导模式'}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="掌握程度">
-                {viewingSession.masteryScore !== null && viewingSession.masteryScore !== undefined
-                  ? `${viewingSession.masteryScore}%`
-                  : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="状态">
-                <Tag color={viewingSession.status === 0 ? 'processing' : 'success'}>
-                  {viewingSession.status === 0 ? '进行中' : '已完成'}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="创建时间">
-                {formatTime(viewingSession.createTime)}
-              </Descriptions.Item>
-            </Descriptions>
-
-            <div className="max-h-[420px] overflow-y-auto rounded-2xl border border-slate-200 p-4">
-              {viewingSession.messages && viewingSession.messages.length > 0 ? (
-                viewingSession.messages.map((msg, index) => {
-                  const isUser = msg.role === 'USER' || msg.role?.toUpperCase() === 'USER';
-                  return (
-                    <div
-                      key={index}
-                      className={`mb-4 flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}
-                    >
-                      <Avatar
-                        icon={isUser ? <UserOutlined /> : <RobotOutlined />}
-                        style={{ backgroundColor: isUser ? '#0f766e' : '#0f172a' }}
-                      />
-                      <div
-                        className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-7 ${
-                          isUser ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-800'
-                        }`}
-                      >
-                        {isUser ? (
-                          <p className="whitespace-pre-wrap">{msg.content}</p>
-                        ) : (
-                          <MarkdownRenderer content={msg.content} />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <Empty description="暂无对话记录" />
-              )}
-            </div>
           </div>
         )}
       </Modal>

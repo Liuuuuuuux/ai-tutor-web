@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeftOutlined,
@@ -39,7 +39,7 @@ import { KnowledgePointStatus } from '@/types';
 const statusConfig: Record<number, { color: string; text: string }> = {
   [KnowledgePointStatus.NOT_STARTED]: { color: 'default', text: '未开始' },
   [KnowledgePointStatus.LEARNING]: { color: 'processing', text: '学习中' },
-  [KnowledgePointStatus.MASTERED]: { color: 'success', text: '已掌握' },
+  [KnowledgePointStatus.MASTERED]: { color: 'blue', text: '已掌握' },
 };
 
 const getStatusConfig = (status: number) =>
@@ -208,14 +208,14 @@ export function KnowledgePointsPage() {
         返回学习空间
       </Button>
 
-      <Card className="overflow-hidden border-0 bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_100%)] text-white shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]">
+      <Card className="overflow-hidden border-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.14),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] text-slate-900 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.18)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/60">
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600">
               Knowledge Map
             </div>
             <h1 className="mt-2 text-3xl font-semibold">知识点树</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-white/75">
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
               先拆出知识点，再选择某个点进入聊天学习。你也可以让 AI 自动帮你生成一版知识点结构。
             </p>
           </div>
@@ -245,7 +245,7 @@ export function KnowledgePointsPage() {
             dataSource={safeKnowledgePoints}
             renderItem={(point: KnowledgePoint) => (
               <List.Item
-                className="rounded-[20px] border border-slate-100 px-4 py-4 transition hover:border-teal-200 hover:bg-teal-50/40"
+                className="rounded-[20px] border border-slate-100 px-4 py-4 transition hover:border-blue-200 hover:bg-blue-50/60"
                 actions={[
                   <Tag key="status" color={getStatusConfig(point.status).color}>
                     {getStatusConfig(point.status).text}

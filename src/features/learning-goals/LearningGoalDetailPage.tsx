@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+﻿import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeftOutlined, ArrowRightOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import {
   Button,
@@ -19,14 +19,14 @@ import { LearningGoalStatus, KnowledgePointStatus } from '@/types';
 
 const statusConfig: Record<number, { color: string; text: string }> = {
   [LearningGoalStatus.ACTIVE]: { color: 'processing', text: '进行中' },
-  [LearningGoalStatus.COMPLETED]: { color: 'success', text: '已完成' },
+  [LearningGoalStatus.COMPLETED]: { color: 'blue', text: '已完成' },
   [LearningGoalStatus.PAUSED]: { color: 'warning', text: '已暂停' },
 };
 
 const pointStatusConfig: Record<number, { color: string; text: string }> = {
   [KnowledgePointStatus.NOT_STARTED]: { color: 'default', text: '未开始' },
   [KnowledgePointStatus.LEARNING]: { color: 'processing', text: '学习中' },
-  [KnowledgePointStatus.MASTERED]: { color: 'success', text: '已掌握' },
+  [KnowledgePointStatus.MASTERED]: { color: 'blue', text: '已掌握' },
 };
 
 export function LearningGoalDetailPage() {
@@ -37,6 +37,12 @@ export function LearningGoalDetailPage() {
   const { data: knowledgeTree, isLoading: treeLoading } = useKnowledgeTree(id || '');
 
   const isLoading = goalLoading || treeLoading;
+
+  const goToChat = () => {
+    if (id) {
+      navigate(`/learning-session/${id}`);
+    }
+  };
 
   const goToKnowledgePoints = () => {
     if (id) {
@@ -86,30 +92,25 @@ export function LearningGoalDetailPage() {
         返回学习空间
       </Button>
 
-      <Card className="overflow-hidden border-0 bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_100%)] text-white shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]">
+      <Card className="overflow-hidden border-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.14),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] text-slate-900 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.18)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-4">
-            <Tag color="success" className="rounded-full border-0 px-3 py-1 text-xs font-medium">
+            <Tag color="blue" className="rounded-full border-0 px-3 py-1 text-xs font-medium">
               学习空间详情
             </Tag>
             <div>
               <h1 className="text-3xl font-semibold md:text-4xl">{goal.title}</h1>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-white/75">
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
                 {goal.description || '暂无描述'}
               </p>
             </div>
           </div>
           <Space wrap>
-            <Button
-              size="large"
-              type="primary"
-              icon={<PlayCircleOutlined />}
-              onClick={goToKnowledgePoints}
-            >
-              开始学习
+            <Button size="large" type="primary" icon={<PlayCircleOutlined />} onClick={goToChat}>
+              开始聊天
             </Button>
-            <Button size="large" ghost onClick={() => navigate(`/exam?goalId=${id}`)}>
-              生成测验
+            <Button size="large" ghost onClick={goToKnowledgePoints}>
+              管理知识点
             </Button>
           </Space>
         </div>
@@ -157,7 +158,7 @@ export function LearningGoalDetailPage() {
               </Col>
               <Col xs={24} md={8}>
                 <div className="rounded-[20px] bg-slate-50 p-4 text-center">
-                  <div className="text-2xl font-semibold text-emerald-600">{masteredCount}</div>
+                  <div className="text-2xl font-semibold text-blue-600">{masteredCount}</div>
                   <div className="mt-1 text-sm text-slate-500">已掌握</div>
                 </div>
               </Col>
@@ -178,8 +179,8 @@ export function LearningGoalDetailPage() {
       <Card
         title="知识点列表"
         extra={
-          <Button type="link" icon={<ArrowRightOutlined />} onClick={goToKnowledgePoints}>
-            打开知识点树
+          <Button type="link" icon={<ArrowRightOutlined />} onClick={goToChat}>
+            直接进入聊天
           </Button>
         }
       >

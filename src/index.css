@@ -18,9 +18,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background:
-    radial-gradient(circle at top left, rgba(20, 184, 166, 0.14), transparent 32%),
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 28%),
-    linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%);
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.1), transparent 28%),
+    radial-gradient(circle at top right, rgba(191, 219, 254, 0.16), transparent 24%),
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 48%, #eef4fb 100%);
   color: #0f172a;
 }
 
@@ -34,12 +34,12 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #edf2f7;
+  background: #e7edf6;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #c3d4ea;
   border-radius: 999px;
 }
 

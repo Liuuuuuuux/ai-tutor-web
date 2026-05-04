@@ -1,4 +1,4 @@
-import request from './client';
+﻿import request from './client';
 import type { ExamPaper } from '@/types';
 
 // 试卷生成请求 - 匹配后端 ExamGenerationPromptDTO
@@ -20,7 +20,7 @@ export interface GenerateExamRequest {
 // 状态映射
 export const examStatusMap: Record<number, { key: string; text: string; color: string }> = {
   0: { key: 'DRAFT', text: '草稿', color: 'default' },
-  1: { key: 'PUBLISHED', text: '已发布', color: 'success' },
+  1: { key: 'PUBLISHED', text: '已发布', color: 'blue' },
   2: { key: 'CLOSED', text: '已关闭', color: 'error' },
 };
 

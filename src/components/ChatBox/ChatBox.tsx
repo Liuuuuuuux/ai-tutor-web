@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Empty, Input, Spin } from 'antd';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Button, Input, Spin } from 'antd';
 import { RobotOutlined, SendOutlined, ThunderboltOutlined, UserOutlined } from '@ant-design/icons';
 import { useSSE } from '@/hooks';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
@@ -12,21 +13,31 @@ interface ChatBoxProps {
   initialMessages?: ChatMessage[];
   onMessageSent?: () => void;
   className?: string;
+  header?: ReactNode;
   title?: string;
   subtitle?: string;
   placeholder?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  emptyAction?: ReactNode;
+  quickPrompts?: string[];
 }
 
-const quickPrompts = ['帮我讲清这个知识点', '给我出 3 个练习题', '总结成一页复习提纲'];
+const defaultQuickPrompts = ['用最简单的话讲清楚', '给我 3 个练习题', '整理成复习提纲'];
 
 export function ChatBox({
   sessionId,
   initialMessages = [],
   onMessageSent,
   className = '',
+  header,
   title = 'AI 学习对话',
-  subtitle = '像 ChatGPT 一样连续追问、讲解和练习',
-  placeholder = '输入你的问题，或者直接说“帮我把这个知识点讲透”',
+  subtitle = '围绕当前知识点持续追问、讲解和练习',
+  placeholder = '直接输入你想问的问题，或者让 AI 带你一步一步学。',
+  emptyTitle = '先选一个知识点开始聊天',
+  emptyDescription = '当前还没有可聊的会话。打开左上角的小标志，挑一个知识点后就能直接开始。',
+  emptyAction,
+  quickPrompts = defaultQuickPrompts,
 }: ChatBoxProps) {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -92,14 +103,16 @@ export function ChatBox({
       <div key={message.id || index} className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
         <div
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm ${
-            isUser ? 'bg-teal-600' : 'bg-slate-900'
+            isUser ? 'bg-[#2563eb]' : 'bg-slate-900'
           }`}
         >
           {isUser ? <UserOutlined /> : <RobotOutlined />}
         </div>
         <div
-          className={`max-w-[min(760px,calc(100%-56px))] rounded-3xl px-4 py-3 text-sm leading-7 shadow-sm ${
-            isUser ? 'bg-teal-600 text-white' : 'border border-slate-200 bg-white text-slate-800'
+          className={`max-w-[min(760px,calc(100%-56px))] rounded-[26px] px-4 py-3 text-sm leading-7 shadow-sm ${
+            isUser
+              ? 'bg-[#2563eb] text-white'
+              : 'border border-stone-200 bg-white/95 text-slate-800'
           }`}
         >
           {isUser ? (
@@ -120,51 +133,73 @@ export function ChatBox({
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm">
           <RobotOutlined />
         </div>
-        <div className="max-w-[min(760px,calc(100%-56px))] rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm leading-7 text-slate-800 shadow-sm">
+        <div className="max-w-[min(760px,calc(100%-56px))] rounded-[26px] border border-stone-200 bg-white/95 px-4 py-3 text-sm leading-7 text-slate-800 shadow-sm">
           <MarkdownRenderer content={streamingContent} />
-          <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded-full bg-teal-500 align-middle" />
+          <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded-full bg-[#2563eb] align-middle" />
         </div>
       </div>
     );
   };
 
+  const renderDefaultHeader = () => (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <ThunderboltOutlined className="text-[#2563eb]" />
+          {title}
+        </div>
+        <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
+      </div>
+      <div className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">
+        {isStreaming ? '正在生成' : '可随时追问'}
+      </div>
+    </div>
+  );
+
+  const emptyStateAction = emptyAction ?? (
+    <Button className="rounded-full" type="primary" onClick={() => inputRef.current?.focus()}>
+      继续提问
+    </Button>
+  );
+
   return (
     <div
-      className={`flex h-full min-h-[680px] flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.45)] backdrop-blur ${className}`}
+      className={`flex h-full min-h-[680px] flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_30px_90px_-40px_rgba(15,23,42,0.18)] backdrop-blur-xl ${className}`}
     >
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white/80 px-5 py-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <ThunderboltOutlined className="text-teal-600" />
-            {title}
-          </div>
-          <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
-        </div>
-        <div className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">
-          {isStreaming ? '正在生成中' : '可随时追问'}
-        </div>
+      <div className="border-b border-slate-200/80 bg-white/75 px-5 py-4 backdrop-blur">
+        {header ?? renderDefaultHeader()}
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] px-5 py-6">
+      <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.05),transparent_36%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-4 py-6 md:px-6">
         {!sessionId ? (
-          <Empty
-            description="请选择一个知识点开始学习"
-            className="flex h-full flex-col items-center justify-center py-16"
-          />
-        ) : displayMessages.length === 0 && !isStreaming ? (
-          <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-6 py-20 text-center">
-            <div className="rounded-3xl bg-teal-50 p-4 text-3xl text-teal-700 shadow-sm">
+          <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center gap-6 py-20 text-center">
+            <div className="rounded-[28px] bg-blue-50 p-4 text-3xl text-[#2563eb] shadow-sm">
               <RobotOutlined />
             </div>
             <div>
-              <h3 className="text-2xl font-semibold text-slate-900">开始一段学习对话</h3>
+              <h3 className="text-2xl font-semibold text-slate-900">{emptyTitle}</h3>
+              <p className="mt-3 text-sm leading-7 text-slate-500">{emptyDescription}</p>
+            </div>
+            {emptyStateAction}
+          </div>
+        ) : displayMessages.length === 0 && !isStreaming ? (
+          <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-6 py-20 text-center">
+            <div className="rounded-[28px] bg-blue-50 p-4 text-3xl text-[#2563eb] shadow-sm">
+              <RobotOutlined />
+            </div>
+            <div>
+              <h3 className="text-2xl font-semibold text-slate-900">开始这一段对话</h3>
               <p className="mt-3 text-sm leading-7 text-slate-500">
-                你可以让 AI 讲解、提问、总结，或者直接让它围绕当前知识点带你一步一步学。
+                你可以让 AI 讲解、追问、总结，也可以直接让它带着你练习当前知识点。
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-2">
               {quickPrompts.map((prompt) => (
-                <Button key={prompt} onClick={() => setInputValue(prompt)} className="rounded-full">
+                <Button
+                  key={prompt}
+                  onClick={() => setInputValue(prompt)}
+                  className="rounded-full border-stone-200 bg-white/90"
+                >
                   {prompt}
                 </Button>
               ))}
@@ -179,8 +214,8 @@ export function ChatBox({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-slate-200 bg-white/95 px-4 py-4">
-        <div className="mx-auto flex max-w-4xl items-end gap-3 rounded-[26px] border border-slate-200 bg-slate-50 p-3 shadow-sm focus-within:border-teal-400">
+      <div className="border-t border-stone-200/80 bg-white/80 px-4 py-4 backdrop-blur">
+        <div className="mx-auto flex max-w-4xl items-end gap-3 rounded-[28px] border border-stone-200 bg-white/95 p-3 shadow-sm focus-within:border-[#2563eb] focus-within:ring-2 focus-within:ring-[#2563eb]/10">
           <TextArea
             ref={inputRef}
             value={inputValue}
@@ -196,7 +231,7 @@ export function ChatBox({
             icon={isStreaming ? <Spin size="small" /> : <SendOutlined />}
             onClick={() => handleSend()}
             disabled={!inputValue.trim() || isStreaming || !sessionId}
-            className="h-11 px-5"
+            className="h-11 rounded-full px-5"
           >
             发送
           </Button>

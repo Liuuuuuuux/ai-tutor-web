@@ -1,4 +1,4 @@
-import { Tree, Tag, Spin, Empty, Button } from 'antd';
+﻿import { Tree, Tag, Spin, Empty, Button } from 'antd';
 import {
   BookOutlined,
   CheckCircleOutlined,
@@ -28,7 +28,7 @@ const statusConfig: Record<number, { color: string; text: string; icon: React.Re
     icon: <PlayCircleOutlined />,
   },
   [KnowledgePointStatus.MASTERED]: {
-    color: 'success',
+    color: 'blue',
     text: '已掌握',
     icon: <CheckCircleOutlined />,
   },
@@ -85,11 +85,11 @@ export function KnowledgeTree({ data, loading, onSelect, onDecompose }: Knowledg
         defaultExpandAll
         treeData={convertToTreeData(data)}
         onSelect={handleSelect}
-        className="bg-gray-50 p-4 rounded-lg"
+        className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
       />
       {onDecompose && (
         <div className="mt-4">
-          <Button type="dashed" onClick={() => data[0] && onDecompose(data[0].id)}>
+          <Button type="primary" onClick={() => data[0] && onDecompose(data[0].id)}>
             AI 拆解知识点
           </Button>
         </div>

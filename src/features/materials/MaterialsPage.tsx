@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Card,
   Button,
@@ -30,7 +30,7 @@ import type { UploadProps } from 'antd';
 
 const sourceConfig = {
   UPLOAD: { text: '上传', color: 'blue' },
-  AI_SEARCH: { text: 'AI搜索', color: 'green' },
+  AI_SEARCH: { text: 'AI搜索', color: 'blue' },
 };
 
 export function MaterialsPage() {
@@ -152,7 +152,7 @@ export function MaterialsPage() {
       render: (status: string) => {
         const config: Record<string, { color: string; text: string }> = {
           PENDING: { color: 'processing', text: '解析中' },
-          SUCCESS: { color: 'success', text: '成功' },
+          SUCCESS: { color: 'blue', text: '成功' },
           FAILED: { color: 'error', text: '失败' },
         };
         return <Tag color={config[status]?.color}>{config[status]?.text || status}</Tag>;

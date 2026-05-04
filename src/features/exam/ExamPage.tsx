@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Card,
@@ -134,12 +134,12 @@ export function ExamPage() {
                 <div
                   key={i}
                   className={`p-2 rounded ${
-                    isCorrect ? 'bg-green-100 border border-green-300' : 'bg-white'
+                    isCorrect ? 'bg-blue-50 border border-blue-200' : 'bg-white'
                   }`}
                 >
                   <span className="font-medium mr-2">{option.optionKey}.</span>
                   {option.content}
-                  {isCorrect && <CheckCircleOutlined className="text-green-500 ml-2" />}
+                  {isCorrect && <CheckCircleOutlined className="text-blue-500 ml-2" />}
                 </div>
               );
             })}
@@ -148,7 +148,7 @@ export function ExamPage() {
 
         {/* 答案和解析 */}
         <div className="ml-6 mt-3">
-          <div className="text-green-600">
+          <div className="text-blue-600">
             <strong>答案：</strong>
             {question.type === 'short_answer' || question.type === 'SHORT_ANSWER' ? (
               <div className="whitespace-pre-wrap mt-1">{question.answer}</div>
