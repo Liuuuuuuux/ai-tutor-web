@@ -10,6 +10,7 @@ import {
   ReadOutlined,
   UserOutlined,
 } from '@ant-design/icons';
+import { logout as logoutRequest } from '@/api';
 import { useUserStore } from '@/stores';
 
 const { Header, Sider, Content } = Layout;
@@ -33,9 +34,15 @@ export function MainLayout() {
     navigate(key);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await logoutRequest();
+    } catch {
+      // The local auth state still needs to be cleared even if the backend session is gone.
+    } finally {
+      logout();
+      navigate('/login');
+    }
   };
 
   const userMenuItems = [
@@ -43,7 +50,9 @@ export function MainLayout() {
       key: 'logout',
       icon: <LogoutOutlined />,
       label: '退出登录',
-      onClick: handleLogout,
+      onClick: () => {
+        void handleLogout();
+      },
     },
   ];
 

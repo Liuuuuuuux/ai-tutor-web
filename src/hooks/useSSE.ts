@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { ChatMessage } from '@/types';
+import { readAuthToken, readStoredUserId } from '@/features/auth/storage';
 
 interface UseSSEOptions {
   onMessage?: (message: ChatMessage) => void;
@@ -52,11 +53,14 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
       const url = `${baseUrl}/learning-sessions/${sessionId}/chat`;
 
       try {
+        const token = readAuthToken();
+        const userId = readStoredUserId();
         const response = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-User-Id': localStorage.getItem('userId') || '',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(userId ? { 'X-User-Id': userId } : {}),
           },
           body: JSON.stringify({ content }),
           signal: abortControllerRef.current.signal,

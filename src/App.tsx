@@ -4,6 +4,7 @@ import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 
 import { MainLayout, ErrorBoundary } from '@/components';
+import { readAuthToken } from '@/features/auth/storage';
 import { HomePage } from '@/features/home';
 import { LoginPage } from '@/features/auth';
 import { LearningGoalsPage, LearningGoalDetailPage } from '@/features/learning-goals';
@@ -24,16 +25,14 @@ const queryClient = new QueryClient({
 });
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const userId = localStorage.getItem('userId');
-  if (!userId) {
+  if (!readAuthToken()) {
     return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const userId = localStorage.getItem('userId');
-  if (userId) {
+  if (readAuthToken()) {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;

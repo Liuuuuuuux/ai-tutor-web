@@ -4,6 +4,9 @@ export interface User {
   username: string;
   nickname: string;
   avatar?: string;
+  status?: string;
+  roleKeys?: string[];
+  permissions?: string[];
   createdAt: string;
   updatedAt: string;
 }

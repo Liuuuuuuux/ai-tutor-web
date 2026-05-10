@@ -1,5 +1,6 @@
 import { request } from './client';
 import type { User } from '@/types';
+import type { AuthSession } from '@/features/auth/storage';
 
 export interface LoginRequest {
   username: string;
@@ -12,12 +13,12 @@ export interface RegisterRequest {
   password: string;
 }
 
-export async function login(data: LoginRequest): Promise<User> {
-  return request.post<User>('/auth/login', data);
+export async function login(data: LoginRequest): Promise<AuthSession> {
+  return request.post<AuthSession>('/auth/login', data);
 }
 
-export async function register(data: RegisterRequest): Promise<User> {
-  return request.post<User>('/auth/register', data);
+export async function register(data: RegisterRequest): Promise<AuthSession> {
+  return request.post<AuthSession>('/auth/register', data);
 }
 
 export async function getCurrentUser(): Promise<User> {
@@ -26,4 +27,8 @@ export async function getCurrentUser(): Promise<User> {
 
 export async function checkUsernameAvailable(username: string): Promise<boolean> {
   return request.get<boolean>(`/auth/check-username?username=${encodeURIComponent(username)}`);
+}
+
+export async function logout(): Promise<boolean> {
+  return request.post<boolean>('/auth/logout');
 }

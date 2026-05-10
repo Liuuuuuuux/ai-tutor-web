@@ -12,7 +12,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { setUser } = useUserStore();
+  const { setSession } = useUserStore();
 
   const onFinish = async (values: { username: string; password: string; nickname?: string }) => {
     setLoading(true);
@@ -25,7 +25,7 @@ export function LoginPage() {
         }
       }
 
-      const user =
+      const session =
         mode === 'login'
           ? await login({ username: values.username, password: values.password })
           : await register({
@@ -34,7 +34,7 @@ export function LoginPage() {
               password: values.password,
             });
 
-      setUser(user);
+      setSession(session);
       message.success(mode === 'login' ? 'Login success' : 'Register success');
       navigate('/');
     } catch (error) {

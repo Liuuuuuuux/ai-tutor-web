@@ -17,13 +17,8 @@ interface ChatBoxProps {
   title?: string;
   subtitle?: string;
   placeholder?: string;
-  emptyTitle?: string;
-  emptyDescription?: string;
-  emptyAction?: ReactNode;
-  quickPrompts?: string[];
+  emptyPrompt?: string;
 }
-
-const defaultQuickPrompts = ['用最简单的话讲清楚', '给我 3 个练习题', '整理成复习提纲'];
 
 export function ChatBox({
   sessionId,
@@ -34,10 +29,7 @@ export function ChatBox({
   title = 'AI 学习对话',
   subtitle = '围绕当前知识点持续追问、讲解和练习',
   placeholder = '直接输入你想问的问题，或者让 AI 带你一步一步学。',
-  emptyTitle = '先选一个知识点开始聊天',
-  emptyDescription = '当前还没有可聊的会话。返回学习空间选择知识点后，就能直接开始。',
-  emptyAction,
-  quickPrompts = defaultQuickPrompts,
+  emptyPrompt,
 }: ChatBoxProps) {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -156,12 +148,6 @@ export function ChatBox({
     </div>
   );
 
-  const emptyStateAction = emptyAction ?? (
-    <Button className="rounded-full" type="primary" onClick={() => inputRef.current?.focus()}>
-      继续提问
-    </Button>
-  );
-
   const hasConversation = displayMessages.length > 0 || isStreaming || Boolean(streamingContent);
 
   const renderComposer = () => (
@@ -201,41 +187,14 @@ export function ChatBox({
 
       <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.05),transparent_36%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-4 py-6 md:px-6">
         {!sessionId ? (
-          <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center gap-6 py-20 text-center">
-            <div className="rounded-[28px] bg-blue-50 p-4 text-3xl text-[#2563eb] shadow-sm">
-              <RobotOutlined />
-            </div>
-            <div>
-              <h3 className="text-2xl font-semibold text-slate-900">{emptyTitle}</h3>
-              <p className="mt-3 text-sm leading-7 text-slate-500">{emptyDescription}</p>
-            </div>
-            {emptyStateAction}
+          <div className="mx-auto flex h-full max-w-2xl items-center justify-center py-20 text-center">
+            <div className="text-sm text-slate-500">当前会话未就绪</div>
           </div>
         ) : !hasConversation ? (
-          <div className="mx-auto flex h-full w-full max-w-2xl flex-col items-center justify-center gap-6 py-20 text-center">
-            <div className="rounded-[28px] bg-blue-50 p-4 text-3xl text-[#2563eb] shadow-sm">
-              <RobotOutlined />
-            </div>
-            <div>
-              <h3 className="text-2xl font-semibold text-slate-900">开始这一段对话</h3>
-              <p className="mt-3 text-sm leading-7 text-slate-500">
-                你可以让 AI 讲解、追问、总结，也可以直接让它带着你练习当前知识点。
-              </p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              {quickPrompts.map((prompt) => (
-                <Button
-                  key={prompt}
-                  onClick={() => {
-                    setInputValue(prompt);
-                    inputRef.current?.focus();
-                  }}
-                  className="rounded-full border-stone-200 bg-white/90"
-                >
-                  {prompt}
-                </Button>
-              ))}
-            </div>
+          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col items-center justify-center gap-5 py-20 text-center">
+            {emptyPrompt ? (
+              <p className="max-w-2xl text-base leading-8 text-slate-600">{emptyPrompt}</p>
+            ) : null}
             <div className="w-full max-w-4xl">{renderComposer()}</div>
           </div>
         ) : (

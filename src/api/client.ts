@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 import { message } from 'antd';
 import type { ApiResponse } from '@/types/api';
+import { clearAuthStorage, readAuthToken, readStoredUserId } from '@/features/auth/storage';
 
 // API 基础配置
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -18,7 +19,12 @@ const client: AxiosInstance = axios.create({
 client.interceptors.request.use(
   (config) => {
     // 从 localStorage 获取用户信息
-    const userId = localStorage.getItem('userId');
+    const token = readAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    const userId = readStoredUserId();
     if (userId) {
       config.headers['X-User-Id'] = userId;
     }
@@ -54,6 +60,7 @@ client.interceptors.response.use(
       const status = error.response.status;
       switch (status) {
         case 401:
+          clearAuthStorage();
           message.error('未授权，请重新登录');
           break;
         case 403:
