@@ -7,8 +7,11 @@ export function getLearningSession(id: string): Promise<LearningSession> {
 }
 
 // 获取当前进行中的会话（用于恢复）
-export function getCurrentSession(pointId: string): Promise<LearningSession | null> {
-  return request.get('/learning-sessions/current', { params: { pointId } });
+export function getCurrentSession(
+  pointId: string,
+  mode: 'TEACHING' | 'COACH'
+): Promise<LearningSession | null> {
+  return request.get('/learning-sessions/current', { params: { pointId, mode } });
 }
 
 // 创建学习会话

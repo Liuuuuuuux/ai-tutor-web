@@ -9,19 +9,7 @@ import {
   BulbOutlined,
   LeftOutlined,
 } from '@ant-design/icons';
-import {
-  Avatar,
-  Button,
-  Drawer,
-  Empty,
-  List,
-  Modal,
-  Result,
-  Segmented,
-  Space,
-  Spin,
-  Tag,
-} from 'antd';
+import { Avatar, Button, Drawer, Empty, List, Modal, Result, Space, Spin, Tag } from 'antd';
 import { ChatBox, MarkdownRenderer } from '@/components';
 import {
   useCompleteSession,
@@ -35,7 +23,6 @@ import {
 } from '@/hooks';
 import { useLearningStore } from '@/stores';
 import type {
-  ChatMessage,
   KnowledgePoint,
   LearningSession,
   SessionCompleteResult,
@@ -89,6 +76,7 @@ export function LearningSessionPage() {
 
   const [resolvedPointId] = useState<string | null>(pointId || null);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [pendingMode, setPendingMode] = useState<'TEACHING' | 'COACH' | null>(null);
   const [completeResult, setCompleteResult] = useState<SessionCompleteResult | null>(null);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [viewingSession, setViewingSession] = useState<LearningSession | null>(null);
@@ -104,6 +92,7 @@ export function LearningSessionPage() {
   const setCurrentKnowledgePoint = useLearningStore((state) => state.setCurrentKnowledgePoint);
   const { mutate: createSession, isPending: isCreatingSession } = useCreateLearningSession();
   const completeSessionMutation = useCompleteSession();
+  const storedCurrentSession = useLearningStore((state) => state.currentSession);
 
   const { data: goal, isLoading: isGoalLoading } = useLearningGoal(goalId || '');
   const { data: knowledgeTree, isLoading: isKnowledgeTreeLoading } = useKnowledgePoints(
@@ -112,11 +101,16 @@ export function LearningSessionPage() {
   const activePointId = pointId || resolvedPointId || '';
   const { data: knowledgePoint, isLoading: isKnowledgePointLoading } =
     useKnowledgePoint(activePointId);
-  const { data: currentSession, isLoading: isCurrentSessionLoading } =
-    useCurrentSession(activePointId);
-  const sessionId = currentSession?.id || '';
+  const { data: currentSession, isLoading: isCurrentSessionLoading } = useCurrentSession(
+    activePointId,
+    mode
+  );
+  const activeSession = currentSession || storedCurrentSession;
+  const sessionId = activeSession?.id || '';
   const { data: historySessions } = useHistorySessions(activePointId);
   const { data: session } = useLearningSession(sessionId || '');
+  const sessionMessages = Array.isArray(session?.messages) ? session.messages : [];
+  const initialMessages = sessionMessages;
 
   useEffect(() => {
     if (pointId || resolvedPointId) return;
@@ -145,10 +139,16 @@ export function LearningSessionPage() {
         {
           onSuccess: (newSession) => {
             isModeSwitching.current = false;
+            lastSessionRequestRef.current = `${activePointId}:${newSession.mode}`;
             lastSyncedSessionIdRef.current = newSession.id;
+            queryClient.setQueryData(
+              ['current-session', activePointId, newSession.mode],
+              newSession
+            );
             setCurrentSession(newSession);
           },
           onError: () => {
+            isModeSwitching.current = false;
             lastSessionRequestRef.current = null;
           },
         }
@@ -181,7 +181,9 @@ export function LearningSessionPage() {
       { pointId: activePointId, mode },
       {
         onSuccess: (newSession) => {
+          lastSessionRequestRef.current = `${activePointId}:${newSession.mode}`;
           lastSyncedSessionIdRef.current = newSession.id;
+          queryClient.setQueryData(['current-session', activePointId, newSession.mode], newSession);
           setCurrentSession(newSession);
         },
         onError: () => {
@@ -199,6 +201,7 @@ export function LearningSessionPage() {
     sessionId,
     setCurrentSession,
     setMode,
+    queryClient,
   ]);
 
   useEffect(() => {
@@ -216,6 +219,14 @@ export function LearningSessionPage() {
   const selectedPoint = knowledgePoint || flatPoints.find((point) => point.id === activePointId);
   const selectedPointStatus =
     selectedPoint?.status !== undefined ? pointStatusConfig[selectedPoint.status] : undefined;
+  const emptyPrompt =
+    mode === 'COACH'
+      ? selectedPoint?.title
+        ? `好的，我们来学习「${selectedPoint.title}」。请先告诉我你已经了解了多少。`
+        : '好的，我们来学习这个知识点。请先告诉我你已经了解了多少。'
+      : selectedPoint?.title
+        ? `好的，我是个小白学生，请老师给我讲讲什么是「${selectedPoint.title}」？`
+        : '好的，我是个小白学生，请老师给我讲讲这个知识点？';
 
   const handleBack = () => {
     navigate('/learning-goals');
@@ -223,18 +234,18 @@ export function LearningSessionPage() {
 
   const handleModeChange = (newMode: 'TEACHING' | 'COACH') => {
     if (newMode === mode) return;
+    setPendingMode(newMode);
+  };
 
-    Modal.confirm({
-      title: '切换学习模式',
-      content: '切换后会为当前知识点开启一段新的会话，之前的记录会保留。继续吗？',
-      onOk: () => {
-        isModeSwitching.current = true;
-        setMode(newMode);
-        setCurrentSession(null);
-        lastSessionRequestRef.current = null;
-        lastSyncedSessionIdRef.current = null;
-      },
-    });
+  const confirmModeChange = () => {
+    if (!pendingMode) return;
+
+    isModeSwitching.current = true;
+    setMode(pendingMode);
+    setCurrentSession(null);
+    lastSessionRequestRef.current = null;
+    lastSyncedSessionIdRef.current = null;
+    setPendingMode(null);
   };
 
   const handleComplete = () => {
@@ -331,33 +342,18 @@ export function LearningSessionPage() {
       <ChatBox
         className="h-full w-full"
         sessionId={sessionId || ''}
-        initialMessages={
-          Array.isArray(session?.messages)
-            ? (session.messages.map((msg: SessionMessage, index: number) => ({
-                id: `${sessionId || 'session'}-${index}`,
-                sessionId: sessionId || '',
-                role: msg.role,
-                content: msg.content,
-                createdAt: msg.createTime || new Date().toISOString(),
-              })) as ChatMessage[])
-            : []
-        }
+        initialMessages={initialMessages.map((msg: SessionMessage, index: number) => ({
+          id: `${sessionId || 'session'}-${index}`,
+          sessionId: sessionId || '',
+          role: msg.role,
+          content: msg.content,
+          createdAt: msg.createTime || new Date().toISOString(),
+        }))}
         onMessageSent={handleMessageSent}
         title="学习对话"
         subtitle="把顶层信息收起来，只把当前知识点和对话留在前面。"
         placeholder="直接问我这个知识点，或者让我带你做练习。"
-        emptyTitle="当前还没有可聊的知识点"
-        emptyDescription="先点击顶部返回按钮回到学习空间，选中一个知识点后就能直接开始聊天。"
-        emptyAction={
-          <Space wrap>
-            <Button onClick={() => navigate('/knowledge-points/' + (goalId || ''))}>
-              去整理知识点
-            </Button>
-            <Button type="primary" onClick={() => navigate('/learning-goals')}>
-              返回学习空间
-            </Button>
-          </Space>
-        }
+        emptyPrompt={emptyPrompt}
         header={
           <div className="space-y-4">
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
@@ -371,14 +367,24 @@ export function LearningSessionPage() {
               </Button>
 
               <div className="flex justify-center">
-                <Segmented
-                  value={mode}
-                  options={[
-                    { label: '教学模式', value: 'TEACHING', icon: <BookOutlined /> },
-                    { label: '引导模式', value: 'COACH', icon: <BulbOutlined /> },
-                  ]}
-                  onChange={(value) => handleModeChange(value as 'TEACHING' | 'COACH')}
-                />
+                <div className="inline-flex rounded-full border border-stone-200 bg-white/95 p-1 shadow-sm">
+                  <Button
+                    type={mode === 'TEACHING' ? 'primary' : 'text'}
+                    icon={<BookOutlined />}
+                    onClick={() => handleModeChange('TEACHING')}
+                    className="h-9 rounded-full px-4"
+                  >
+                    教学模式
+                  </Button>
+                  <Button
+                    type={mode === 'COACH' ? 'primary' : 'text'}
+                    icon={<BulbOutlined />}
+                    onClick={() => handleModeChange('COACH')}
+                    className="h-9 rounded-full px-4"
+                  >
+                    引导模式
+                  </Button>
+                </div>
               </div>
 
               <div className="flex justify-end">
@@ -469,6 +475,17 @@ export function LearningSessionPage() {
           <Empty description="暂无历史记录" />
         )}
       </Drawer>
+
+      <Modal
+        open={pendingMode !== null}
+        title="切换学习模式"
+        onCancel={() => setPendingMode(null)}
+        onOk={confirmModeChange}
+        okText="继续"
+        cancelText="取消"
+      >
+        切换后会为当前知识点开启一段新的会话，之前的记录会保留。继续吗？
+      </Modal>
 
       <Modal
         open={showCompleteModal}

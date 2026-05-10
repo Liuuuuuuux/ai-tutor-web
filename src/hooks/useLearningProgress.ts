@@ -174,11 +174,11 @@ export function useLearningSession(id: string) {
   });
 }
 
-export function useCurrentSession(pointId: string) {
+export function useCurrentSession(pointId: string, mode: 'TEACHING' | 'COACH') {
   return useQuery({
-    queryKey: ['current-session', pointId],
-    queryFn: () => api.getCurrentSession(pointId),
-    enabled: !!pointId,
+    queryKey: ['current-session', pointId, mode],
+    queryFn: () => api.getCurrentSession(pointId, mode),
+    enabled: !!pointId && !!mode,
   });
 }
 
@@ -201,8 +201,14 @@ export function useSessionMessages(sessionId: string) {
 }
 
 export function useCreateLearningSession() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: api.createLearningSession,
+    onSuccess: (newSession, variables) => {
+      queryClient.setQueryData(['current-session', variables.pointId, variables.mode], newSession);
+      queryClient.invalidateQueries({ queryKey: ['history-sessions', variables.pointId] });
+      queryClient.invalidateQueries({ queryKey: ['learning-session', newSession.id] });
+    },
   });
 }
 
